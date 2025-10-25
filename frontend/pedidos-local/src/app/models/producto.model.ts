@@ -18,3 +18,4 @@ export interface ProductoSingleResponse {
   success: boolean;
   data: Producto;
 }
+

@@ -33,3 +33,4 @@ export class ProductoService {
     return this.http.delete<{success: boolean, message: string}>(`${this.apiUrl}/${id}`);
   }
 }
+

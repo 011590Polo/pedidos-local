@@ -53,3 +53,4 @@ export interface SeguimientoResponse {
     nombres_productos: string;
   };
 }
+

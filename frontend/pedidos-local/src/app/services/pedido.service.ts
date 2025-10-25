@@ -38,3 +38,4 @@ export class PedidoService {
     return this.http.get<SeguimientoResponse>(`${this.apiUrl}/seguimiento/${codigo}`);
   }
 }
+
