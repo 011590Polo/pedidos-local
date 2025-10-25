@@ -15,10 +15,13 @@
             <div *ngFor="let producto of productos" 
                  class="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
               <div class="flex justify-between items-start">
-                <div class="flex-1">
-                  <h3 class="font-medium text-gray-900">{{ producto.nombre }}</h3>
-                  <p class="text-sm text-gray-600">{{ producto.categoria }}</p>
-                  <p class="text-lg font-bold text-green-600">${{ producto.precio | number:'1.2-2' }}</p>
+                <div class="flex items-center space-x-2 flex-1">
+                  <img *ngIf="producto.imagen" [src]="producto.imagen" alt="{{ producto.nombre }}" class="w-8 h-8 object-cover rounded mr-2 border border-gray-200" />
+                  <div>
+                    <h3 class="font-medium text-gray-900">{{ producto.nombre }}</h3>
+                    <p class="text-sm text-gray-600">{{ producto.categoria }}</p>
+                    <p class="text-lg font-bold text-green-600">${{ producto.precio | number:'1.2-2' }}</p>
+                  </div>
                 </div>
                 <button 
                   (click)="agregarAlCarrito(producto)"

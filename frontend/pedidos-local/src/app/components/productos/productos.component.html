@@ -60,16 +60,17 @@
           <div *ngFor="let producto of filtrarProductos()" 
                class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
             <div class="flex justify-between items-start mb-3">
-              <h3 class="text-lg font-semibold text-gray-900">{{ producto.nombre }}</h3>
+              <div class="flex items-center space-x-2">
+                <img *ngIf="producto.imagen" [src]="producto.imagen" alt="{{ producto.nombre }}" class="w-10 h-10 object-cover rounded mr-2 border border-gray-200" />
+                <h3 class="text-lg font-semibold text-gray-900">{{ producto.nombre }}</h3>
+              </div>
               <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
                 {{ producto.categoria }}
               </span>
             </div>
-            
             <p class="text-gray-600 text-sm mb-3" *ngIf="producto.descripcion">
               {{ producto.descripcion }}
             </p>
-            
             <div class="flex justify-between items-center">
               <span class="text-2xl font-bold text-green-600">
                 ${{ producto.precio | number:'1.2-2' }}
