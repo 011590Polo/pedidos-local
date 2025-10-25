@@ -1,0 +1,26 @@
+# Node
+node_modules/
+npm-debug.log
+.env
+.env.local
+
+# Angular
+/dist/
+/out-tsc/
+/tmp/
+/.angular/
+
+# IDEs
+.vscode/
+.idea/
+
+# Logs
+logs/
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Build
+build/

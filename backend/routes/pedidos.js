@@ -1,0 +1,323 @@
+const express = require('express');
+const router = express.Router();
+const {
+  getPedidos,
+  getPedidoById,
+  getPedidoByCodigo,
+  createPedido,
+  updatePedido,
+  deletePedido
+} = require('../database');
+
+// GET /pedidos - Listar todos los pedidos
+router.get('/', (req, res) => {
+  getPedidos((err, pedidos) => {
+    if (err) {
+      console.error('Error al obtener pedidos:', err);
+      return res.status(500).json({
+        error: 'Error interno del servidor',
+        message: 'No se pudieron obtener los pedidos'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: pedidos,
+      count: pedidos.length
+    });
+  });
+});
+
+// GET /pedidos/:id - Obtener un pedido específico
+router.get('/:id', (req, res) => {
+  const { id } = req.params;
+  
+  if (!id || isNaN(id)) {
+    return res.status(400).json({
+      error: 'ID inválido',
+      message: 'El ID debe ser un número válido'
+    });
+  }
+  
+  getPedidoById(id, (err, pedido) => {
+    if (err) {
+      console.error('Error al obtener pedido:', err);
+      return res.status(500).json({
+        error: 'Error interno del servidor',
+        message: 'No se pudo obtener el pedido'
+      });
+    }
+    
+    if (!pedido) {
+      return res.status(404).json({
+        error: 'Pedido no encontrado',
+        message: 'El pedido solicitado no existe'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: pedido
+    });
+  });
+});
+
+// GET /pedidos/seguimiento/:codigo - Consultar pedido por código público
+router.get('/seguimiento/:codigo', (req, res) => {
+  const { codigo } = req.params;
+  
+  if (!codigo || codigo.trim().length === 0) {
+    return res.status(400).json({
+      error: 'Código inválido',
+      message: 'El código de seguimiento es requerido'
+    });
+  }
+  
+  getPedidoByCodigo(codigo.trim().toUpperCase(), (err, pedido) => {
+    if (err) {
+      console.error('Error al obtener pedido por código:', err);
+      return res.status(500).json({
+        error: 'Error interno del servidor',
+        message: 'No se pudo obtener el pedido'
+      });
+    }
+    
+    if (!pedido) {
+      return res.status(404).json({
+        error: 'Pedido no encontrado',
+        message: 'No se encontró un pedido con ese código de seguimiento'
+      });
+    }
+    
+    // Formatear la respuesta para el seguimiento
+    const respuesta = {
+      codigo_publico: pedido.codigo_publico,
+      estado: pedido.estado,
+      total: pedido.total,
+      fecha: pedido.fecha,
+      cliente: pedido.cliente,
+      mesa: pedido.mesa,
+      productos: pedido.productos || 'Sin productos',
+      cantidades: pedido.cantidades || '',
+      nombres_productos: pedido.nombres_productos || ''
+    };
+    
+    res.json({
+      success: true,
+      data: respuesta
+    });
+  });
+});
+
+// POST /pedidos - Crear un nuevo pedido
+router.post('/', (req, res) => {
+  const { cliente, mesa, productos } = req.body;
+  
+  // Validaciones básicas
+  if (!productos || !Array.isArray(productos) || productos.length === 0) {
+    return res.status(400).json({
+      error: 'Productos requeridos',
+      message: 'Debe incluir al menos un producto en el pedido'
+    });
+  }
+  
+  // Validar estructura de productos
+  for (let i = 0; i < productos.length; i++) {
+    const producto = productos[i];
+    if (!producto.id || !producto.cantidad || !producto.precio) {
+      return res.status(400).json({
+        error: 'Datos de producto inválidos',
+        message: `El producto ${i + 1} debe tener id, cantidad y precio`
+      });
+    }
+    
+    if (producto.cantidad <= 0 || producto.precio <= 0) {
+      return res.status(400).json({
+        error: 'Datos de producto inválidos',
+        message: `El producto ${i + 1} debe tener cantidad y precio mayores a 0`
+      });
+    }
+  }
+  
+  // Calcular total
+  let total = 0;
+  const productosConSubtotal = productos.map(producto => {
+    const subtotal = producto.cantidad * producto.precio;
+    total += subtotal;
+    return {
+      id: producto.id,
+      cantidad: producto.cantidad,
+      subtotal: subtotal
+    };
+  });
+  
+  const pedido = {
+    cliente: cliente ? cliente.trim() : 'Cliente no especificado',
+    mesa: mesa ? mesa.trim() : null,
+    total: parseFloat(total.toFixed(2)),
+    productos: productosConSubtotal
+  };
+  
+  createPedido(pedido, (err, resultado) => {
+    if (err) {
+      console.error('Error al crear pedido:', err);
+      return res.status(500).json({
+        error: 'Error interno del servidor',
+        message: 'No se pudo crear el pedido'
+      });
+    }
+    const nuevoPedido = {
+      id: resultado.id,
+      codigo_publico: resultado.codigo_publico,
+      cliente: pedido.cliente,
+      mesa: pedido.mesa,
+      total: pedido.total,
+      productos: pedido.productos
+    };
+
+    // Responder al cliente HTTP
+    res.status(201).json({
+      success: true,
+      message: 'Pedido creado exitosamente',
+      data: nuevoPedido
+    });
+
+    // Emitir evento por Socket.IO para notificar a clientes conectados
+    try {
+      const io = req.app.get('io');
+      if (io) io.emit('pedidoCreado', nuevoPedido);
+    } catch (emitErr) {
+      console.error('Error al emitir evento pedidoCreado:', emitErr);
+    }
+  });
+});
+
+// PUT /pedidos/:id - Actualizar un pedido
+router.put('/:id', (req, res) => {
+  const { id } = req.params;
+  const { cliente, mesa, estado, total } = req.body;
+  
+  if (!id || isNaN(id)) {
+    return res.status(400).json({
+      error: 'ID inválido',
+      message: 'El ID debe ser un número válido'
+    });
+  }
+  
+  // Validaciones
+  if (estado && !['Pendiente', 'En preparación', 'Listo', 'Entregado', 'Cancelado'].includes(estado)) {
+    return res.status(400).json({
+      error: 'Estado inválido',
+      message: 'El estado debe ser: Pendiente, En preparación, Listo, Entregado o Cancelado'
+    });
+  }
+  
+  if (total !== undefined && (typeof total !== 'number' || total < 0)) {
+    return res.status(400).json({
+      error: 'Total inválido',
+      message: 'El total debe ser un número mayor o igual a 0'
+    });
+  }
+  
+  const pedido = {};
+  if (cliente !== undefined) pedido.cliente = cliente.trim();
+  if (mesa !== undefined) pedido.mesa = mesa ? mesa.trim() : null;
+  if (estado !== undefined) pedido.estado = estado;
+  if (total !== undefined) pedido.total = parseFloat(total);
+  
+  if (Object.keys(pedido).length === 0) {
+    return res.status(400).json({
+      error: 'Datos faltantes',
+      message: 'Debe proporcionar al menos un campo para actualizar'
+    });
+  }
+  
+  updatePedido(id, pedido, (err, changes) => {
+    if (err) {
+      console.error('Error al actualizar pedido:', err);
+      return res.status(500).json({
+        error: 'Error interno del servidor',
+        message: 'No se pudo actualizar el pedido'
+      });
+    }
+    
+    if (changes === 0) {
+      return res.status(404).json({
+        error: 'Pedido no encontrado',
+        message: 'El pedido solicitado no existe'
+      });
+    }
+    // Obtener el pedido actualizado para conocer su codigo_publico y estado
+    getPedidoById(id, (err2, pedidoActualizado) => {
+      if (err2) {
+        console.error('Error al obtener pedido actualizado:', err2);
+      }
+
+      // Responder al cliente HTTP
+      res.json({
+        success: true,
+        message: 'Pedido actualizado exitosamente',
+        data: {
+          id: parseInt(id),
+          ...pedido
+        }
+      });
+
+      // Emitir evento solo si en la petición se actualizó el estado (interesa a quien está en seguimiento)
+      try {
+        if (pedido.estado !== undefined && pedidoActualizado && pedidoActualizado.codigo_publico) {
+          const io = req.app.get('io');
+          const room = `seguimiento:${pedidoActualizado.codigo_publico}`;
+          const payload = {
+            id: pedidoActualizado.id,
+            codigo_publico: pedidoActualizado.codigo_publico,
+            estado: pedidoActualizado.estado,
+            total: pedidoActualizado.total,
+            fecha: pedidoActualizado.fecha,
+            cliente: pedidoActualizado.cliente,
+            mesa: pedidoActualizado.mesa
+          };
+          if (io) io.to(room).emit('pedidoActualizado', payload);
+        }
+      } catch (emitErr) {
+        console.error('Error al emitir evento pedidoActualizado:', emitErr);
+      }
+    });
+  });
+});
+
+// DELETE /pedidos/:id - Eliminar un pedido
+router.delete('/:id', (req, res) => {
+  const { id } = req.params;
+  
+  if (!id || isNaN(id)) {
+    return res.status(400).json({
+      error: 'ID inválido',
+      message: 'El ID debe ser un número válido'
+    });
+  }
+  
+  deletePedido(id, (err, changes) => {
+    if (err) {
+      console.error('Error al eliminar pedido:', err);
+      return res.status(500).json({
+        error: 'Error interno del servidor',
+        message: 'No se pudo eliminar el pedido'
+      });
+    }
+    
+    if (changes === 0) {
+      return res.status(404).json({
+        error: 'Pedido no encontrado',
+        message: 'El pedido solicitado no existe'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Pedido eliminado exitosamente'
+    });
+  });
+});
+
+module.exports = router;

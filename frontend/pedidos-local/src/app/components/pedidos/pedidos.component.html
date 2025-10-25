@@ -1,0 +1,235 @@
+<div class="min-h-screen bg-gray-50 p-4">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <h1 class="text-3xl font-bold text-gray-900">Gestión de Pedidos</h1>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Panel de Productos -->
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">Productos Disponibles</h2>
+          
+          <div class="space-y-3 max-h-96 overflow-y-auto">
+            <div *ngFor="let producto of productos" 
+                 class="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
+              <div class="flex justify-between items-start">
+                <div class="flex-1">
+                  <h3 class="font-medium text-gray-900">{{ producto.nombre }}</h3>
+                  <p class="text-sm text-gray-600">{{ producto.categoria }}</p>
+                  <p class="text-lg font-bold text-green-600">${{ producto.precio | number:'1.2-2' }}</p>
+                </div>
+                <button 
+                  (click)="agregarAlCarrito(producto)"
+                  class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors">
+                  + Agregar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel del Carrito -->
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-900">Carrito</h2>
+            <button 
+              (click)="limpiarCarrito()"
+              *ngIf="carrito.length > 0"
+              class="text-red-600 hover:text-red-800 text-sm">
+              Limpiar
+            </button>
+          </div>
+
+          <div *ngIf="carrito.length === 0" class="text-center py-8 text-gray-500">
+            <p>El carrito está vacío</p>
+            <p class="text-sm">Agrega productos para crear un pedido</p>
+          </div>
+
+          <div *ngIf="carrito.length > 0" class="space-y-3 max-h-80 overflow-y-auto">
+            <div *ngFor="let item of carrito" class="border border-gray-200 rounded-lg p-3">
+              <div class="flex justify-between items-center">
+                <div class="flex-1">
+                  <h4 class="font-medium text-gray-900">{{ getProductoNombre(item.id) }}</h4>
+                  <p class="text-sm text-gray-600">${{ item.precio | number:'1.2-2' }} c/u</p>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <button 
+                    (click)="actualizarCantidad(item.id, item.cantidad - 1)"
+                    class="bg-gray-200 hover:bg-gray-300 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center">
+                    -
+                  </button>
+                  <span class="w-8 text-center">{{ item.cantidad }}</span>
+                  <button 
+                    (click)="actualizarCantidad(item.id, item.cantidad + 1)"
+                    class="bg-gray-200 hover:bg-gray-300 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center">
+                    +
+                  </button>
+                  <button 
+                    (click)="quitarDelCarrito(item.id)"
+                    class="text-red-600 hover:text-red-800 ml-2">
+                    ✕
+                  </button>
+                </div>
+              </div>
+              <div class="text-right mt-2">
+                <span class="font-bold text-green-600">${{ item.subtotal | number:'1.2-2' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="carrito.length > 0" class="mt-4 pt-4 border-t border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+              <span class="text-lg font-bold text-gray-900">Total:</span>
+              <span class="text-2xl font-bold text-green-600">${{ getTotalCarrito() | number:'1.2-2' }}</span>
+            </div>
+            <button 
+              (click)="abrirFormularioPedido()"
+              class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors">
+              Crear Pedido
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel de Pedidos -->
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">Pedidos Recientes</h2>
+          
+          <div *ngIf="cargando" class="text-center py-4">
+            <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          </div>
+
+          <div *ngIf="!cargando && pedidos.length === 0" class="text-center py-8 text-gray-500">
+            <p>No hay pedidos</p>
+          </div>
+
+          <div *ngIf="!cargando && pedidos.length > 0" class="space-y-3 max-h-96 overflow-y-auto">
+            <div *ngFor="let pedido of pedidos" class="border border-gray-200 rounded-lg p-3">
+              <div class="flex justify-between items-start mb-2">
+                <div>
+                  <h4 class="font-medium text-gray-900">{{ pedido.cliente }}</h4>
+                  <p class="text-sm text-gray-600" *ngIf="pedido.mesa">Mesa: {{ pedido.mesa }}</p>
+                  <p class="text-sm text-gray-600">Código: {{ pedido.codigo_publico }}</p>
+                </div>
+                <span [class]="'px-2 py-1 rounded-full text-xs font-medium ' + getEstadoColor(pedido.estado)">
+                  {{ pedido.estado }}
+                </span>
+              </div>
+              
+              <p class="text-sm text-gray-600 mb-2">{{ pedido.productos }}</p>
+              <p class="font-bold text-green-600">${{ pedido.total | number:'1.2-2' }}</p>
+              
+              <div class="flex space-x-2 mt-3">
+                <select 
+                  (change)="actualizarEstadoPedido(pedido.id!, $any($event.target).value)"
+                  [value]="pedido.estado"
+                  class="flex-1 text-xs border border-gray-300 rounded px-2 py-1">
+                  <option *ngFor="let estado of estados" [value]="estado">{{ estado }}</option>
+                </select>
+                <button 
+                  (click)="eliminarPedido(pedido.id!)"
+                  class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs">
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Formulario Pedido -->
+<div *ngIf="mostrarFormulario" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-lg max-w-md w-full">
+    <div class="p-6">
+      <h2 class="text-xl font-bold text-gray-900 mb-6">Crear Pedido</h2>
+
+      <form (ngSubmit)="crearPedido()" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Cliente *</label>
+          <input 
+            type="text" 
+            [(ngModel)]="nuevoPedido.cliente" 
+            name="cliente"
+            required
+            placeholder="Nombre del cliente"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Mesa</label>
+          <input 
+            type="text" 
+            [(ngModel)]="nuevoPedido.mesa" 
+            name="mesa"
+            placeholder="Ej: Mesa 5, Barra 2..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg">
+          <h3 class="font-medium text-gray-900 mb-2">Resumen del Pedido</h3>
+          <div *ngFor="let item of nuevoPedido.productos" class="flex justify-between text-sm">
+            <span>{{ getProductoNombre(item.id) }} x{{ item.cantidad }}</span>
+            <span>${{ item.subtotal | number:'1.2-2' }}</span>
+          </div>
+          <div class="border-t border-gray-300 pt-2 mt-2 flex justify-between font-bold">
+            <span>Total:</span>
+            <span>${{ getTotalCarrito() | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="flex space-x-3 pt-4">
+          <button 
+            type="submit"
+            [disabled]="cargando"
+            class="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+            {{ cargando ? 'Creando...' : 'Crear Pedido' }}
+          </button>
+          <button 
+            type="button"
+            (click)="cerrarFormulario()"
+            class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Código Generado -->
+<div *ngIf="codigoGenerado" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-lg max-w-md w-full">
+    <div class="p-6 text-center">
+      <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+      </div>
+      
+      <h2 class="text-xl font-bold text-gray-900 mb-2">¡Pedido Creado!</h2>
+      <p class="text-gray-600 mb-4">El código de seguimiento es:</p>
+      
+      <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-6">
+        <span class="text-3xl font-bold text-blue-600">{{ codigoGenerado }}</span>
+      </div>
+      
+      <p class="text-sm text-gray-600 mb-6">
+        Comparte este código con el cliente para que pueda hacer seguimiento de su pedido.
+      </p>
+      
+      <button 
+        (click)="cerrarFormulario()"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+        Continuar
+      </button>
+    </div>
+  </div>
+</div>
