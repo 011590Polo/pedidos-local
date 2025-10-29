@@ -6,6 +6,7 @@ const { Server } = require('socket.io');
 // Importar rutas
 const productosRoutes = require('./routes/productos');
 const pedidosRoutes = require('./routes/pedidos');
+const analyticsRoutes = require('./routes/analytics');
 
 // Importar configuración de base de datos
 const { initializeDatabase } = require('./database');
@@ -96,6 +97,7 @@ app.use(cors({
 // 🚀 RUTAS PRINCIPALES (con prefijo /api para evitar conflicto con rutas del frontend)
 app.use('/api/productos', productosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Ruta base de prueba
 app.get('/', (req, res) => {
