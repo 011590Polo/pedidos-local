@@ -221,6 +221,84 @@ function createPedido(pedido, callback) {
   );
 }
 
+// Función para crear un pedido con lógica de reutilización de código público
+function createPedidoConReutilizacion(pedido, callback) {
+  const { cliente, mesa, total, productos } = pedido;
+  
+  // Primero verificar si existe un pedido activo reciente del mismo cliente
+  getPedidoActivoReciente(cliente, (err, pedidoActivo) => {
+    if (err) {
+      console.error('Error al verificar pedido activo:', err);
+      // Si hay error, proceder con la lógica normal
+      createPedido(pedido, callback);
+      return;
+    }
+    
+    if (pedidoActivo) {
+      // Existe un pedido activo, agregar productos al pedido existente
+      console.log(`Agregando productos al pedido existente ${pedidoActivo.codigo_publico} para cliente ${cliente}`);
+      
+      const pedidoId = pedidoActivo.id;
+      const codigo_publico = pedidoActivo.codigo_publico;
+      
+      // Actualizar el total del pedido existente
+      const nuevoTotal = pedidoActivo.total + total;
+      
+      db.run(
+        'UPDATE pedidos SET total = ? WHERE id = ?',
+        [nuevoTotal, pedidoId],
+        function(err) {
+          if (err) {
+            callback(err, null);
+            return;
+          }
+          
+          // Insertar detalles del pedido
+          if (productos && productos.length > 0) {
+            let completed = 0;
+            const totalProductos = productos.length;
+            
+            productos.forEach((producto) => {
+              addDetallePedido({
+                id_pedido: pedidoId,
+                id_producto: producto.id,
+                cantidad: producto.cantidad,
+                subtotal: producto.subtotal
+              }, (err) => {
+                if (err) {
+                  console.error('Error al insertar detalle:', err);
+                }
+                
+                completed++;
+                if (completed === totalProductos) {
+                  callback(null, { 
+                    id: pedidoId, 
+                    codigo_publico,
+                    reutilizado: true,
+                    pedido_original_id: pedidoActivo.id,
+                    total_actualizado: nuevoTotal
+                  });
+                }
+              });
+            });
+          } else {
+            callback(null, { 
+              id: pedidoId, 
+              codigo_publico,
+              reutilizado: true,
+              pedido_original_id: pedidoActivo.id,
+              total_actualizado: nuevoTotal
+            });
+          }
+        }
+      );
+    } else {
+      // No existe pedido activo, proceder con la lógica normal
+      createPedido(pedido, callback);
+    }
+  });
+}
+
 // Función para agregar detalle al pedido
 function addDetallePedido(detalle, callback) {
   const { id_pedido, id_producto, cantidad, subtotal } = detalle;
@@ -263,6 +341,27 @@ function getPedidoByCodigo(codigo, callback) {
     WHERE p.codigo_publico = ?
     GROUP BY p.id
   `, [codigo], callback);
+}
+
+// Función para verificar si existe un pedido activo del mismo cliente en las últimas 6 horas
+function getPedidoActivoReciente(cliente, callback) {
+  const seisHorasAtras = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+  
+  db.get(`
+    SELECT p.*, 
+           GROUP_CONCAT(d.cantidad || 'x ' || pr.nombre) as productos,
+           GROUP_CONCAT(d.cantidad) as cantidades,
+           GROUP_CONCAT(pr.nombre) as nombres_productos
+    FROM pedidos p
+    LEFT JOIN detalle_pedido d ON p.id = d.id_pedido
+    LEFT JOIN productos pr ON d.id_producto = pr.id
+    WHERE p.cliente = ? 
+      AND p.fecha > ? 
+      AND p.estado NOT IN ('Entregado', 'Cancelado')
+    GROUP BY p.id
+    ORDER BY p.fecha DESC
+    LIMIT 1
+  `, [cliente, seisHorasAtras], callback);
 }
 
 // Función para actualizar un pedido
@@ -342,10 +441,12 @@ module.exports = {
   updateProducto,
   deleteProducto,
   createPedido,
+  createPedidoConReutilizacion,
   addDetallePedido,
   getPedidos,
   getPedidoById,
   getPedidoByCodigo,
+  getPedidoActivoReciente,
   updatePedido,
   deletePedido,
   closeDatabase

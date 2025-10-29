@@ -44,12 +44,18 @@ export class PedidosComponent implements OnInit, OnDestroy {
     this.cargarProductos();
     this.cargarPedidos();
 
+    // Verificar conexión Socket.IO
+    console.log('🔍 Verificando conexión Socket.IO...');
+    console.log('🔌 Socket conectado:', this.socketService.isConnected());
+
     // Suscribirse a eventos de productos creados para actualizar la vista en tiempo real
     this.productoCreadoHandler = (producto: any) => {
+      console.log('📦 Evento productoCreado recibido:', producto);
       // evitar duplicados (si ya existe con mismo id)
       const exists = this.productos.some(p => p.id === producto.id);
       if (!exists) {
         this.productos.push(producto);
+        console.log('✅ Producto agregado a la lista');
       }
     };
 
@@ -57,14 +63,50 @@ export class PedidosComponent implements OnInit, OnDestroy {
 
     // Suscribirse a eventos de pedidos creados para actualizar la lista de pedidos en tiempo real
     this.pedidoCreadoHandler = (pedido: any) => {
-      // evitar duplicados
-      const exists = this.pedidos.some(p => p.id === pedido.id);
-      if (!exists) {
-        // insertar al inicio (recientes primero)
-        this.pedidos.unshift(pedido);
+      debugger;
+      console.log('🎉 Evento pedidoCreado recibido en el componente:', pedido);
+      
+      // Normalizar el objeto del evento para que coincida con el formato de cargarPedidos()
+      const pedidoNormalizado = pedido;
+      
+      // Verificar si es un pedido reutilizado (agregado a pedido existente)
+      if (pedido.reutilizado) {
+        console.log('🔄 Pedido reutilizado detectado, actualizando pedido existente...');
+        
+        // Buscar el pedido existente por ID
+        const pedidoExistenteIndex = this.pedidos.findIndex(p => p.id === pedido.id);
+        
+        if (pedidoExistenteIndex !== -1) {
+          // Actualizar el pedido existente con los nuevos datos normalizados
+          this.pedidos[pedidoExistenteIndex] = {
+            ...this.pedidos[pedidoExistenteIndex],
+            total: pedido.total_actualizado || pedido.total,
+            productos: pedidoNormalizado.productos
+          };
+          console.log('✅ Pedido existente actualizado con nuevo total:', pedido.total_actualizado || pedido.total);
+        } else {
+          // Si no existe en la lista, agregarlo normalizado
+          this.pedidos.unshift(pedidoNormalizado);
+          console.log('✅ Pedido reutilizado agregado a la lista (no estaba cargado)');
+        }
+      } else {
+        // Pedido nuevo normal
+        const exists = this.pedidos.some(p => p.id === pedido.id);
+        if (!exists) {
+          // insertar al inicio (recientes primero) normalizado
+          this.pedidos.unshift(pedidoNormalizado);
+          console.log('✅ Pedido nuevo agregado a la lista. Total pedidos:', this.pedidos.length);
+        } else {
+          console.log('⚠️ Pedido ya existe en la lista, no se agregará');
+        }
       }
     };
     this.socketService.on('pedidoCreado', this.pedidoCreadoHandler);
+
+    // Verificar conexión después de un tiempo
+    setTimeout(() => {
+      console.log('🔍 Verificación tardía de Socket.IO:', this.socketService.isConnected());
+    }, 3000);
   }
 
   ngOnDestroy(): void {
@@ -232,4 +274,6 @@ export class PedidosComponent implements OnInit, OnDestroy {
       default: return 'bg-gray-100 text-gray-800';
     }
   }
+
+
 }

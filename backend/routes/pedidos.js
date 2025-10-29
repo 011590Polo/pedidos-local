@@ -4,7 +4,7 @@ const {
   getPedidos,
   getPedidoById,
   getPedidoByCodigo,
-  createPedido,
+  createPedidoConReutilizacion,
   updatePedido,
   deletePedido
 } = require('../database');
@@ -124,6 +124,7 @@ router.post('/', (req, res) => {
   // Validar estructura de productos
   for (let i = 0; i < productos.length; i++) {
     const producto = productos[i];
+    console.log(producto);
     if (!producto.id || !producto.cantidad || !producto.precio) {
       return res.status(400).json({
         error: 'Datos de producto inválidos',
@@ -140,8 +141,10 @@ router.post('/', (req, res) => {
   }
   
   // Calcular total
+  debugger;
   let total = 0;
   const productosConSubtotal = productos.map(producto => {
+    console.log(producto);
     const subtotal = producto.cantidad * producto.precio;
     total += subtotal;
     return {
@@ -155,10 +158,10 @@ router.post('/', (req, res) => {
     cliente: cliente ? cliente.trim() : 'Cliente no especificado',
     mesa: mesa ? mesa.trim() : null,
     total: parseFloat(total.toFixed(2)),
-    productos: productosConSubtotal
+    productos: productosConSubtotal,
+    concat_productos_nombres: productosConSubtotal.map(producto => producto.nombre).join(', ')
   };
-  
-  createPedido(pedido, (err, resultado) => {
+  createPedidoConReutilizacion(pedido, (err, resultado) => {
     if (err) {
       console.error('Error al crear pedido:', err);
       return res.status(500).json({
@@ -166,29 +169,48 @@ router.post('/', (req, res) => {
         message: 'No se pudo crear el pedido'
       });
     }
-    const nuevoPedido = {
+    
+    // Construir respuesta base y luego complementar con agregados desde la BD
+    const basePedido = {
       id: resultado.id,
       codigo_publico: resultado.codigo_publico,
       cliente: pedido.cliente,
       mesa: pedido.mesa,
-      total: pedido.total,
-      productos: pedido.productos
+      total: resultado.total_actualizado || pedido.total
     };
 
-    // Responder al cliente HTTP
-    res.status(201).json({
-      success: true,
-      message: 'Pedido creado exitosamente',
-      data: nuevoPedido
-    });
-
-    // Emitir evento por Socket.IO para notificar a clientes conectados
-    try {
-      const io = req.app.get('io');
-      if (io) io.emit('pedidoCreado', nuevoPedido);
-    } catch (emitErr) {
-      console.error('Error al emitir evento pedidoCreado:', emitErr);
+    // Determinar el mensaje según si se reutilizó el código o no
+    let mensaje = 'Pedido creado exitosamente';
+    if (resultado.reutilizado) {
+      mensaje = `Productos agregados al pedido existente con código público ${resultado.codigo_publico}`;
+      basePedido.reutilizado = true;
+      basePedido.pedido_original_id = resultado.pedido_original_id;
+      basePedido.total_actualizado = resultado.total_actualizado;
     }
+
+    // Consultar el pedido con productos agregados (cadena concatenada como en getPedidos)
+    getPedidoByCodigo(basePedido.codigo_publico, (aggErr, pedidoAgg) => {
+      const respuesta = {
+        ...basePedido,
+        // Si la consulta falla o no trae productos, caer al formato original
+        productos: (pedidoAgg && pedidoAgg.productos) ? pedidoAgg.productos : pedido.productos
+      };
+
+      // Responder al cliente HTTP con datos consistentes
+      res.status(201).json({
+        success: true,
+        message: mensaje,
+        data: respuesta
+      });
+
+      // Emitir evento por Socket.IO para notificar a clientes conectados con los productos concatenados
+      try {
+        const io = req.app.get('io');
+        if (io) io.emit('pedidoCreado', respuesta);
+      } catch (emitErr) {
+        console.error('Error al emitir evento pedidoCreado:', emitErr);
+      }
+    });
   });
 });
 

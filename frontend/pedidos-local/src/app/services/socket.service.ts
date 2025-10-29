@@ -7,11 +7,45 @@ import { environment } from '../../environments/environment';
 })
 export class SocketService {
   private socket: Socket;
+  private connected: boolean = false;
 
   constructor() {
     // Ajusta la URL si tu backend corre en otro host/puerto
-  // En desarrollo apuntamos al backend local
-  this.socket = io(`${environment.apiUrl}`);
+    // En desarrollo apuntamos al backend local
+    console.log('🔌 Inicializando Socket.IO con URL:', environment.apiUrl);
+    this.socket = io(`${environment.apiUrl}`, {
+      autoConnect: true,
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
+      forceNew: true
+    });
+    
+    // Agregar listeners para debug
+    this.socket.on('connect', () => {
+      console.log('✅ Socket.IO conectado:', this.socket.id);
+      this.connected = true;
+    });
+    
+    this.socket.on('disconnect', () => {
+      console.log('❌ Socket.IO desconectado');
+      this.connected = false;
+    });
+    
+    this.socket.on('connect_error', (error) => {
+      console.error('❌ Error de conexión Socket.IO:', error);
+      this.connected = false;
+    });
+    
+    // Verificar conexión después de un tiempo
+    setTimeout(() => {
+      if (!this.connected) {
+        console.warn('⚠️ Socket.IO no se conectó después de 5 segundos');
+      }
+    }, 5000);
+  }
+
+  isConnected(): boolean {
+    return this.connected && this.socket.connected;
   }
 
   on(event: string, callback: (...args: any[]) => void) {
