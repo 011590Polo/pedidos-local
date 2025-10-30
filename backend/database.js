@@ -565,35 +565,33 @@ function getVentasUltimaSemana(callback) {
   }
   
   // Crear la consulta con LEFT JOIN para incluir días sin ventas
-  const placeholders = fechas.map(() => '?').join(',');
+  // Usando UNION ALL para crear las fechas de manera compatible con SQLite
+  const valoresFechas = fechas.map(fecha => `SELECT '${fecha}' as fecha_dia`).join(' UNION ALL ');
   
   db.all(`
     WITH dias_semana AS (
-      SELECT fecha_dia, 
-             strftime('%w', fecha_dia) as dia_semana,
-             CASE strftime('%w', fecha_dia)
-               WHEN '0' THEN 'Domingo'
-               WHEN '1' THEN 'Lunes'
-               WHEN '2' THEN 'Martes'
-               WHEN '3' THEN 'Miércoles'
-               WHEN '4' THEN 'Jueves'
-               WHEN '5' THEN 'Viernes'
-               WHEN '6' THEN 'Sábado'
-             END as nombre_dia
-      FROM (VALUES ${fechas.map(() => '(?)').join(',')}) AS fechas(fecha_dia)
+      ${valoresFechas}
     )
     SELECT 
       ds.fecha_dia as fecha,
-      ds.dia_semana,
-      ds.nombre_dia,
+      strftime('%w', ds.fecha_dia) as dia_semana,
+      CASE strftime('%w', ds.fecha_dia)
+        WHEN '0' THEN 'Domingo'
+        WHEN '1' THEN 'Lunes'
+        WHEN '2' THEN 'Martes'
+        WHEN '3' THEN 'Miércoles'
+        WHEN '4' THEN 'Jueves'
+        WHEN '5' THEN 'Viernes'
+        WHEN '6' THEN 'Sábado'
+      END as nombre_dia,
       COALESCE(COUNT(p.id), 0) as pedidos,
       COALESCE(SUM(p.total), 0) as ventas,
       COALESCE(AVG(p.total), 0) as promedio_venta
     FROM dias_semana ds
     LEFT JOIN pedidos p ON DATE(p.fecha) = ds.fecha_dia AND p.estado != 'Cancelado'
-    GROUP BY ds.fecha_dia, ds.dia_semana, ds.nombre_dia
+    GROUP BY ds.fecha_dia
     ORDER BY ds.fecha_dia ASC
-  `, fechas, callback);
+  `, callback);
 }
 
 // Función para obtener tendencia de ventas (últimos 30 días)

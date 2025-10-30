@@ -119,8 +119,8 @@ app.get('/', (req, res) => {
     message: '✅ API PedidosLocal funcionando correctamente',
     version: '1.0.0',
     endpoints: {
-      productos: '/productos',
-      pedidos: '/pedidos'
+      productos: 'api/productos',
+      pedidos: 'api/pedidos'
     }
   });
 });
