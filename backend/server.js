@@ -20,10 +20,23 @@ const server = http.createServer(app);
 // Configurar Socket.IO con CORS abierto (se controla abajo en Express)
 const io = new Server(server, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+    origin:
+    [
+     'http://localhost:4200'
+      ,        // para desarrollo local
+      'http://192.168.100.75:4200'
+      ,   // si accedes por IP local
+      'https://robertogroup.org'
+      ,    // dominio del túnel Cloudflare
+      'https://*.trycloudflare.com'   // si usas túnel temporal
+      ,'http://127.0.0.1:4200'
+    ]
+    ,
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
+
 
 // Exponer io a través de app para que las rutas puedan emitir eventos
 app.set('io', io);
@@ -75,7 +88,8 @@ app.use(cors({
     const allowedPatterns = [
       /^http:\/\/localhost(:\d+)?$/,
       /^http:\/\/192\.168\.100\.75(:\d+)?$/,
-      /^https:\/\/.*\.trycloudflare\.com$/
+      /^https:\/\/.*\.trycloudflare\.com$/,
+      /^https:\/\/robertogroup\.org$/   // 👈 AGREGA ESTA LÍNEA
     ];
 
     // Verificar si el origen cumple con alguno
