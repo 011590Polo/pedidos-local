@@ -192,6 +192,11 @@ router.post('/', (req, res) => {
     getPedidoByCodigo(basePedido.codigo_publico, (aggErr, pedidoAgg) => {
       const respuesta = {
         ...basePedido,
+        // Asegurar consistencia de campos esperados en frontend
+        estado: (pedidoAgg && pedidoAgg.estado) ? pedidoAgg.estado : 'Pendiente',
+        fecha: (pedidoAgg && pedidoAgg.fecha) ? pedidoAgg.fecha : new Date().toISOString(),
+        cliente: (pedidoAgg && pedidoAgg.cliente) ? pedidoAgg.cliente : basePedido.cliente,
+        mesa: (pedidoAgg && pedidoAgg.mesa) ? pedidoAgg.mesa : basePedido.mesa,
         // Si la consulta falla o no trae productos, caer al formato original
         productos: (pedidoAgg && pedidoAgg.productos) ? pedidoAgg.productos : pedido.productos
       };
@@ -299,7 +304,11 @@ router.put('/:id', (req, res) => {
             cliente: pedidoActualizado.cliente,
             mesa: pedidoActualizado.mesa
           };
-          if (io) io.to(room).emit('pedidoActualizado', payload);
+          if (io) {
+            io.to(room).emit('pedidoActualizado', payload);
+            // Emitir también de forma global para que otras vistas (listas/dashboard) actualicen
+            io.emit('pedidoActualizado', payload);
+          }
         }
       } catch (emitErr) {
         console.error('Error al emitir evento pedidoActualizado:', emitErr);

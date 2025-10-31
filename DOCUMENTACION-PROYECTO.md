@@ -14,9 +14,10 @@
 11. [Guía de Instalación](#guía-de-instalación)
 12. [Configuración y Variables de Entorno](#configuración-y-variables-de-entorno)
 13. [Solución Implementada para Socket.IO](#solución-implementada-para-socketio)
-14. [Pruebas y Testing](#pruebas-y-testing)
-15. [Despliegue](#despliegue)
-16. [Mejoras Futuras](#mejoras-futuras)
+14. [Dashboard y Analytics](#dashboard-y-analytics)
+15. [Pruebas y Testing](#pruebas-y-testing)
+16. [Despliegue](#despliegue)
+17. [Mejoras Futuras](#mejoras-futuras)
 
 ---
 
@@ -26,9 +27,11 @@
 
 - ✅ Gestión completa de productos
 - ✅ Creación y seguimiento de pedidos
+- ✅ Dashboard con analytics y estadísticas
 - ✅ Actualizaciones en tiempo real mediante Socket.IO
 - ✅ Base de datos local con SQLite
 - ✅ Interfaz moderna y responsive con Angular
+- ✅ Reutilización automática de códigos de pedidos para el mismo cliente
 
 ---
 
@@ -82,11 +85,12 @@
 ## 4. Estructura del Proyecto
 
 ```
-prole/
+pedidos-local-origin/
 ├── backend/                      # Servidor Node.js
 │   ├── routes/                   # Rutas de la API
 │   │   ├── pedidos.js           # Endpoints de pedidos
-│   │   └── productos.js         # Endpoints de productos
+│   │   ├── productos.js         # Endpoints de productos
+│   │   └── analytics.js         # Endpoints de analytics
 │   ├── database.js              # Conexión y lógica de BD
 │   └── server.js                # Servidor principal
 │
@@ -97,8 +101,9 @@ prole/
 │       │   │   ├── components/  # Componentes Angular
 │       │   │   │   ├── pedidos/
 │       │   │   │   ├── productos/
-│       │   │   │   └── seguimiento/
-│       │   │   ├── services/    # Servicios (HTTP, Socket)
+│       │   │   │   ├── seguimiento/
+│       │   │   │   └── dashboard/
+│       │   │   ├── services/    # Servicios (HTTP, Socket, Analytics)
 │       │   │   ├── models/      # Interfaces TypeScript
 │       │   │   ├── app.routes.ts
 │       │   │   └── app.config.ts
@@ -111,7 +116,7 @@ prole/
 ├── pedidos.db                   # Base de datos SQLite
 ├── package.json                 # Dependencias root
 ├── test-database.js            # Script de pruebas
-└── DOCUMENTACION.md            # Este archivo
+└── DOCUMENTACION-PROYECTO.md    # Este archivo
 ```
 
 ---
@@ -177,9 +182,22 @@ Ubicación: `backend/database.js`
 - `initializeDatabase()`: Inicializa tablas si no existen
 - `getProductos(callback)`: Obtiene todos los productos activos
 - `createPedido(pedido, callback)`: Crea un nuevo pedido
+- `createPedidoConReutilizacion(pedido, callback)`: Crea un pedido con lógica de reutilización
 - `getPedidoByCodigo(codigo, callback)`: Busca pedido por código público
 - `updatePedido(id, pedido, callback)`: Actualiza un pedido
 - `deletePedido(id, callback)`: Elimina un pedido
+
+#### Funciones de Analytics
+- `getVentasPorPeriodo(periodo, callback)`: Obtiene ventas por período (dia, semana, mes)
+- `getProductosMasVendidos(limite, callback)`: Productos más vendidos
+- `getClientesMasFrecuentes(limite, callback)`: Clientes más frecuentes
+- `getIngresosTotales(callback)`: Ingresos totales y estadísticas
+- `getEstadoPedidos(callback)`: Distribución de estados
+- `getVentasPorHora(callback)`: Ventas por hora del día
+- `getVentasUltimaSemana(callback)`: Ventas de los últimos 7 días
+- `getTendenciaVentas(callback)`: Tendencia de últimos 30 días
+- `getPedidosPorCliente(filtros, callback)`: Pedidos con filtros
+- `getClientesUnicos(callback)`: Lista de clientes únicos
 
 ---
 
@@ -266,10 +284,86 @@ Crea un nuevo pedido.
 #### PUT `/api/pedidos/:id`
 Actualiza estado u otros datos del pedido.
 
-**Solución Implementada:** Al crear un pedido, el servidor:
-1. Responde inmediatamente al cliente HTTP con datos básicos
-2. Consulta la BD para obtener el pedido completo con productos formateados
-3. Emite evento Socket.IO con el formato correcto (productos como string)
+**Funcionalidad de Reutilización:** Al crear un pedido del mismo cliente en las últimas 6 horas, el sistema:
+1. Verifica si existe un pedido activo reciente del mismo cliente
+2. Si existe, agrega los productos al pedido existente en lugar de crear uno nuevo
+3. Actualiza el total del pedido existente
+4. Emite evento Socket.IO con el pedido actualizado
+
+**Respuesta de reutilización:**
+```json
+{
+  "success": true,
+  "message": "Productos agregados al pedido existente con código público ABC12",
+  "data": {
+    "id": 42,
+    "codigo_publico": "ABC12",
+    "reutilizado": true,
+    "pedido_original_id": 42,
+    "total_actualizado": 50.00
+  }
+}
+```
+
+#### DELETE `/api/pedidos/:id`
+Elimina un pedido.
+
+### 6.3 Endpoints de Analytics
+
+#### GET `/api/analytics/dashboard`
+Obtiene un resumen completo del dashboard con todos los datos principales.
+
+**Respuesta:**
+```json
+{
+  "success": true,
+  "data": {
+    "ingresos": {
+      "ingresos_totales": 1500.00,
+      "pedidos_exitosos": 100,
+      "pedidos_cancelados": 5,
+      "total_pedidos": 105,
+      "promedio_pedido": 15.00
+    },
+    "estados": [...],
+    "productosMasVendidos": [...],
+    "clientesMasFrecuentes": [...],
+    "ventasDia": [...],
+    "ventasUltimaSemana": [...],
+    "tendenciaVentas": [...]
+  }
+}
+```
+
+#### GET `/api/analytics/ventas/:periodo`
+Obtiene ventas por período (dia, semana, mes).
+
+#### GET `/api/analytics/productos-mas-vendidos?limite=10`
+Obtiene los productos más vendidos.
+
+#### GET `/api/analytics/clientes-mas-frecuentes?limite=10`
+Obtiene los clientes que más compran.
+
+#### GET `/api/analytics/ingresos-totales`
+Obtiene ingresos totales y estadísticas generales.
+
+#### GET `/api/analytics/estado-pedidos`
+Obtiene distribución de estados de pedidos.
+
+#### GET `/api/analytics/ventas-por-hora`
+Obtiene ventas desglosadas por hora del día.
+
+#### GET `/api/analytics/tendencia-ventas`
+Obtiene tendencia de ventas de los últimos 30 días.
+
+#### GET `/api/analytics/ventas-ultima-semana`
+Obtiene ventas de la última semana por día.
+
+#### GET `/api/analytics/pedidos-por-cliente`
+Obtiene pedidos filtrados por cliente con múltiples filtros.
+
+#### GET `/api/analytics/clientes-unicos`
+Obtiene lista de todos los clientes únicos.
 
 ---
 
@@ -301,6 +395,14 @@ Actualiza estado u otros datos del pedido.
 - Mostrar estado en tiempo real
 - Suscripción a actualizaciones de estado
 
+#### DashboardComponent (`components/dashboard/`)
+**Responsabilidades:**
+- Mostrar estadísticas generales del negocio
+- Visualizar ingresos totales y promedios
+- Mostrar productos y clientes más frecuentes
+- Gráficos de ventas por período
+- Filtrar pedidos por múltiples criterios
+
 ### 7.2 Servicios
 
 #### PedidoService (`services/pedido.service.ts`)
@@ -321,6 +423,23 @@ export class SocketService {
   emit(event: string, data?: any)
   joinSeguimiento(codigo: string)
   leaveSeguimiento(codigo: string)
+}
+```
+
+#### AnalyticsService (`services/analytics.service.ts`)
+```typescript
+export class AnalyticsService {
+  getDashboard(): Observable<DashboardData>
+  getVentasPorPeriodo(periodo: 'dia' | 'semana' | 'mes'): Observable<VentasPorPeriodo[]>
+  getProductosMasVendidos(limite: number): Observable<ProductoMasVendido[]>
+  getClientesMasFrecuentes(limite: number): Observable<ClienteMasFrecuente[]>
+  getIngresosTotales(): Observable<IngresosTotales>
+  getEstadoPedidos(): Observable<EstadoPedido[]>
+  getVentasPorHora(): Observable<VentasPorHora[]>
+  getTendenciaVentas(): Observable<TendenciaVentas[]>
+  getVentasUltimaSemana(): Observable<VentasUltimaSemana[]>
+  getPedidosPorCliente(filtros: FiltrosPedidos): Observable<PedidoDetallado[]>
+  getClientesUnicos(): Observable<string[]>
 }
 ```
 
@@ -474,10 +593,23 @@ db.get(`
 - ✅ Actualizaciones instantáneas sin refrescar página
 - ✅ Información completa: productos, total, fecha
 
-### 9.4 Comunicación en Tiempo Real
+### 9.4 Dashboard y Analytics
+- ✅ Vista general de métricas del negocio
+- ✅ Ingresos totales y promedios
+- ✅ Productos y clientes más frecuentes
+- ✅ Gráficos de ventas por período
+- ✅ Filtros avanzados de pedidos
+- ✅ Tendencia de ventas de últimos 30 días
+
+### 9.5 Comunicación en Tiempo Real
 - ✅ Notificaciones instantáneas de nuevos pedidos
 - ✅ Actualización de estados en vivo
 - ✅ Sincronización automática entre múltiples clientes
+
+### 9.6 Reutilización de Pedidos
+- ✅ Detección automática de pedidos activos recientes del mismo cliente
+- ✅ Agregado de productos a pedidos existentes
+- ✅ Actualización automática de totales
 
 ---
 
@@ -585,8 +717,26 @@ const PORT = process.env.PORT || 3000;
 const allowedPatterns = [
   /^http:\/\/localhost(:\d+)?$/,           // Desarrollo local
   /^http:\/\/192\.168\.100\.75(:\d+)?$/,  // Red local
-  /^https:\/\/.*\.trycloudflare\.com$/     // Cloudflare Tunnel
+  /^https:\/\/.*\.trycloudflare\.com$/,    // Cloudflare Tunnel
+  /^https:\/\/robertogroup\.org$/           // Dominio de producción
 ];
+```
+
+**Socket.IO CORS:**
+```javascript
+const io = new Server(server, {
+  cors: {
+    origin: [
+      'http://localhost:4200',
+      'http://192.168.100.75:4200',
+      'https://robertogroup.org',
+      'https://*.trycloudflare.com',
+      'http://127.0.0.1:4200'
+    ],
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
 ```
 
 ### 12.2 Frontend
@@ -686,9 +836,87 @@ Productos: 2x Hamburguesa Clásica, 1x Coca Cola
 
 ---
 
-## 14. Pruebas y Testing
+## 14. Dashboard y Analytics
 
-### 14.1 Prueba Manual de Base de Datos
+### 14.1 Descripción General
+
+El dashboard proporciona una vista completa de las métricas del negocio en tiempo real, permitiendo tomar decisiones basadas en datos.
+
+### 14.2 Funcionalidades del Dashboard
+
+#### Panel de Resumen
+- **Ingresos Totales**: Suma de todos los pedidos completados
+- **Pedidos Exitosos**: Cantidad de pedidos entregados
+- **Pedidos Cancelados**: Cantidad de pedidos cancelados
+- **Promedio por Pedido**: Valor promedio de cada pedido
+- **Total de Pedidos**: Cantidad total de pedidos
+
+#### Distribución de Estados
+Visualización de pedidos agrupados por estado actual:
+- Pendiente
+- En preparación
+- Listo
+- Entregado
+- Cancelado
+
+#### Top Productos Más Vendidos
+Lista de productos más populares con métricas:
+- Cantidad total vendida
+- Veces que ha sido pedido
+- Ingresos generados
+
+#### Top Clientes Más Frecuentes
+Clientes con mayor actividad:
+- Total de pedidos realizados
+- Total gastado
+- Promedio por pedido
+- Fecha del último pedido
+
+#### Ventas por Día
+Desglose de ventas de los últimos 7 días con:
+- Fecha y día de la semana
+- Cantidad de pedidos por día
+- Total de ventas por día
+- Promedio de venta por día
+
+#### Tendencia de Ventas
+Gráfica de los últimos 30 días mostrando la evolución de las ventas.
+
+### 14.3 Filtros Avanzados de Pedidos
+
+El dashboard incluye un sistema de filtros para búsquedas específicas:
+
+**Filtros Disponibles:**
+- **Cliente**: Búsqueda parcial por nombre
+- **Estado**: Filtro por estado específico
+- **Fecha Desde/Hasta**: Rango de fechas
+- **Total Mínimo/Máximo**: Rango de montos
+- **Límite**: Cantidad máxima de resultados
+
+**Resultados:**
+- Lista detallada de pedidos que cumplen los criterios
+- Información completa de cada pedido
+- Productos, cantidades y subtotales desglosados
+
+### 14.4 Formato de Datos
+
+Todos los endpoints de analytics devuelven datos consistentes con formato:
+- Fechas en ISO 8601
+- Montos con precisión de 2 decimales
+- Agrupaciones por día, hora o período según corresponda
+
+### 14.5 Integración Frontend-Backend
+
+El componente `DashboardComponent` se conecta automáticamente con el backend para obtener:
+1. Resumen general del dashboard (endpoint `/dashboard`)
+2. Datos específicos según necesidad
+3. Actualización automática en tiempo real mediante recarga manual
+
+---
+
+## 15. Pruebas y Testing
+
+### 15.1 Prueba Manual de Base de Datos
 
 ```bash
 npm test
@@ -700,7 +928,7 @@ Este comando ejecuta `test-database.js` que:
 - Crea un pedido de prueba
 - Muestra resultados en consola
 
-### 14.2 Pruebas de Funcionalidad
+### 15.2 Pruebas de Funcionalidad
 
 **1. Crear Producto:**
 - Abrir `/productos`
@@ -723,7 +951,7 @@ Este comando ejecuta `test-database.js` que:
 - Crear pedido en una pestaña
 - Verificar que aparece en la otra
 
-### 14.3 Testing con Postman
+### 15.3 Testing con Postman
 
 **Colección de Endpoints:**
 
@@ -734,9 +962,9 @@ Este comando ejecuta `test-database.js` que:
 
 ---
 
-## 15. Despliegue
+## 16. Despliegue
 
-### 15.1 Build de Producción
+### 16.1 Build de Producción
 
 **Frontend:**
 ```bash
@@ -757,7 +985,7 @@ app.get('*', (req, res) => {
 });
 ```
 
-### 15.2 Despliegue Local
+### 16.2 Despliegue Local
 
 ```bash
 # 1. Build del frontend
@@ -767,7 +995,7 @@ cd frontend/pedidos-local && npm run build && cd ../..
 npm start
 ```
 
-### 15.3 Despliegue con Cloudflare Tunnel
+### 16.3 Despliegue con Cloudflare Tunnel
 
 ```bash
 # 1. Instalar cloudflared
@@ -781,7 +1009,7 @@ cloudflared tunnel run my-tunnel
 
 Actualizar `environment.ts` con la URL del tunnel.
 
-### 15.4 Consideraciones de Producción
+### 16.4 Consideraciones de Producción
 
 - ⚠️ Cambiar CORS para dominios específicos
 - ⚠️ Usar variables de entorno para configuración sensible
@@ -792,39 +1020,39 @@ Actualizar `environment.ts` con la URL del tunnel.
 
 ---
 
-## 16. Mejoras Futuras
+## 17. Mejoras Futuras
 
-### 16.1 Funcionalidades Sugeridas
+### 17.1 Funcionalidades Sugeridas
 
-- ✅ **Autenticación de usuarios** (JWT)
-- ✅ **Roles y permisos** (Admin, Mesero, Cliente)
-- ✅ **Sistema de mesas con mapa visual**
-- ✅ **Impresión de tickets**
-- ✅ **Reportes y estadísticas**
-- ✅ **Historial de pedidos por cliente**
-- ✅ **Sistema de favoritos**
-- ✅ **Descuentos y promociones**
-- ✅ **Múltiples métodos de pago**
-- ✅ **Notificaciones push**
+- ⚠️ **Autenticación de usuarios** (JWT)
+- ⚠️ **Roles y permisos** (Admin, Mesero, Cliente)
+- ⚠️ **Sistema de mesas con mapa visual**
+- ⚠️ **Impresión de tickets**
+- ⚠️ **Reportes personalizados** (ya existe dashboard básico)
+- ⚠️ **Historial de pedidos por cliente** (parcialmente implementado)
+- ⚠️ **Sistema de favoritos**
+- ⚠️ **Descuentos y promociones**
+- ⚠️ **Múltiples métodos de pago**
+- ⚠️ **Notificaciones push**
 
-### 16.2 Mejoras Técnicas
+### 17.2 Mejoras Técnicas
 
-- ✅ **Base de datos PostgreSQL** para producción
-- ✅ **Caché Redis** para sesiones
-- ✅ **Tests unitarios y de integración**
-- ✅ **Documentación API** (Swagger/OpenAPI)
-- ✅ **CI/CD Pipeline**
-- ✅ **Docker Containerization**
-- ✅ **Manejo de archivos** para imágenes de productos
-- ✅ **Internacionalización (i18n)**
+- ⚠️ **Base de datos PostgreSQL** para producción
+- ⚠️ **Caché Redis** para sesiones
+- ⚠️ **Tests unitarios y de integración**
+- ⚠️ **Documentación API** (Swagger/OpenAPI)
+- ⚠️ **CI/CD Pipeline**
+- ⚠️ **Docker Containerization**
+- ⚠️ **Manejo de archivos** para imágenes de productos
+- ⚠️ **Internacionalización (i18n)**
 
-### 16.3 Optimizaciones
+### 17.3 Optimizaciones
 
-- ✅ **Lazy loading** de componentes Angular
-- ✅ **Paginación** en listas grandes
-- ✅ **Compresión de respuestas**
-- ✅ **CDN** para assets estáticos
-- ✅ **Service Workers** para PWA
+- ⚠️ **Lazy loading** de componentes Angular
+- ⚠️ **Paginación** en listas grandes
+- ⚠️ **Compresión de respuestas**
+- ⚠️ **CDN** para assets estáticos
+- ⚠️ **Service Workers** para PWA
 
 ---
 
@@ -840,6 +1068,25 @@ MIT License - Ver archivo LICENSE para más detalles.
 
 ---
 
-**Versión de la Documentación:** 1.0  
-**Última actualización:** Enero 2024  
+**Versión de la Documentación:** 2.0  
+**Última actualización:** Diciembre 2024  
 **Autor:** Equipo de Desarrollo PedidosLocal
+
+---
+
+## 📝 Notas de Versión
+
+### Versión 2.0 (Diciembre 2024)
+- ✅ Agregada sección completa de Dashboard y Analytics
+- ✅ Documentados 9+ endpoints de analytics nuevos
+- ✅ Documentada funcionalidad de reutilización de pedidos
+- ✅ Actualizada estructura del proyecto con componentes dashboard
+- ✅ Documentado servicio AnalyticsService
+- ✅ Actualizada configuración CORS con dominios de producción
+- ✅ Reorganizada numeración de secciones
+- ✅ Actualizado estado de mejoras futuras
+
+### Versión 1.0 (Enero 2024)
+- Versión inicial de la documentación
+- Funcionalidades básicas de productos y pedidos
+- Comunicación en tiempo real con Socket.IO

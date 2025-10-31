@@ -43,6 +43,13 @@ function createTables() {
         activo INTEGER DEFAULT 1
       )`,
       
+      // Tabla categorias
+      `CREATE TABLE IF NOT EXISTS categorias (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT UNIQUE NOT NULL,
+        activo INTEGER DEFAULT 1
+      )`,
+      
       // Tabla pedidos
       `CREATE TABLE IF NOT EXISTS pedidos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -89,6 +96,23 @@ function createTables() {
 
 // Función para insertar datos de ejemplo
 function insertSampleData() {
+  // Insertar categorías de ejemplo
+  const categorias = [
+    'Hamburguesas', 'Pizzas', 'Bebidas', 'Ensaladas', 'Pastas'
+  ];
+
+  categorias.forEach((nombre) => {
+    db.run(
+      'INSERT OR IGNORE INTO categorias (nombre, activo) VALUES (?, 1)',
+      [nombre],
+      (err) => {
+        if (err) {
+          console.error('Error al insertar categoría:', err.message);
+        }
+      }
+    );
+  });
+
   const productos = [
     { nombre: 'Hamburguesa Clásica', precio: 12.50, categoria: 'Hamburguesas', imagen: 'hamburguesa-clasica.jpg', descripcion: 'Hamburguesa con carne, lechuga, tomate y queso' },
     { nombre: 'Pizza Margherita', precio: 15.00, categoria: 'Pizzas', imagen: 'pizza-margherita.jpg', descripcion: 'Pizza con tomate, mozzarella y albahaca' },
@@ -120,6 +144,33 @@ function generarCodigoPublico() {
 // Función para obtener todos los productos
 function getProductos(callback) {
   db.all('SELECT * FROM productos WHERE activo = 1 ORDER BY categoria, nombre', callback);
+}
+
+// =====================
+// Categorías
+// =====================
+
+function getCategorias(callback) {
+  db.all('SELECT id, nombre, activo FROM categorias WHERE activo = 1 ORDER BY nombre ASC', callback);
+}
+
+function createCategoria(nombre, callback) {
+  const nombreTrim = (nombre || '').trim();
+  if (!nombreTrim) {
+    callback(new Error('Nombre de categoría requerido'), null);
+    return;
+  }
+  db.run(
+    'INSERT OR IGNORE INTO categorias (nombre, activo) VALUES (?, 1)',
+    [nombreTrim],
+    function(err) {
+      if (err) {
+        callback(err, null);
+      } else {
+        callback(null, this.lastID);
+      }
+    }
+  );
 }
 
 // Función para obtener un producto por ID
@@ -323,8 +374,11 @@ function getPedidos(callback) {
       CASE 
         WHEN p.estado = 'Pendiente' THEN 1
         WHEN p.estado = 'En preparación' THEN 2
-        ELSE 3
-      END,
+        WHEN p.estado = 'Listo' THEN 3
+        WHEN p.estado = 'Entregado' THEN 4
+        WHEN p.estado = 'Cancelado' THEN 5
+        ELSE 6
+      END ASC,
       p.fecha DESC
   `, callback);
 }
@@ -723,5 +777,8 @@ module.exports = {
   getVentasUltimaSemana,
   getTendenciaVentas,
   getPedidosPorCliente,
-  getClientesUnicos
+  getClientesUnicos,
+  // Categorías
+  getCategorias,
+  createCategoria
 };

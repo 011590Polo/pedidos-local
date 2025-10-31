@@ -5,6 +5,7 @@ import { ProductoService } from '../../services/producto.service';
 import { SocketService } from '../../services/socket.service';
 import { PedidoService } from '../../services/pedido.service';
 import { Producto } from '../../models/producto.model';
+import { environment } from '../../../environments/environment';
 import { Pedido, PedidoRequest, ProductoPedido } from '../../models/pedido.model';
 
 @Component({
@@ -21,6 +22,9 @@ export class PedidosComponent implements OnInit, OnDestroy {
   cargando: boolean = false;
   mostrarFormulario: boolean = false;
   codigoGenerado: string = '';
+  mostrarImagenModal: boolean = false;
+  imagenSeleccionadaUrl: string = '';
+  private endPressHandler = () => this.onPressEnd();
 
   // Formulario de pedido
   nuevoPedido: PedidoRequest = {
@@ -32,6 +36,7 @@ export class PedidosComponent implements OnInit, OnDestroy {
   estados = ['Pendiente', 'En preparación', 'Listo', 'Entregado', 'Cancelado'];
   private productoCreadoHandler: ((p: any) => void) | null = null;
   private pedidoCreadoHandler: ((p: any) => void) | null = null;
+  private pedidoActualizadoHandler: ((p: any) => void) | null = null;
 
   constructor(
     private productoService: ProductoService,
@@ -103,6 +108,36 @@ export class PedidosComponent implements OnInit, OnDestroy {
     };
     this.socketService.on('pedidoCreado', this.pedidoCreadoHandler);
 
+    // Suscripción a actualizaciones de pedidos (cambio de estado)
+    this.pedidoActualizadoHandler = (payload: any) => {
+      const prioridad: Record<string, number> = {
+        'Pendiente': 1,
+        'En preparación': 2,
+        'Listo': 3,
+        'Entregado': 4,
+        'Cancelado': 5
+      };
+      const idx = this.pedidos.findIndex(p => p.id === payload.id);
+      if (idx !== -1) {
+        this.pedidos[idx] = {
+          ...this.pedidos[idx],
+          estado: payload.estado ?? this.pedidos[idx].estado,
+          total: payload.total ?? this.pedidos[idx].total,
+          fecha: payload.fecha ?? this.pedidos[idx].fecha
+        } as any;
+      }
+      // Reordenar por prioridad y fecha desc
+      this.pedidos = [...this.pedidos].sort((a: any, b: any) => {
+        const pa = prioridad[a?.estado] ?? 99;
+        const pb = prioridad[b?.estado] ?? 99;
+        if (pa !== pb) return pa - pb;
+        const ta = a?.fecha ? new Date(a.fecha).getTime() : 0;
+        const tb = b?.fecha ? new Date(b.fecha).getTime() : 0;
+        return tb - ta;
+      });
+    };
+    this.socketService.on('pedidoActualizado', this.pedidoActualizadoHandler);
+
     // Verificar conexión después de un tiempo
     setTimeout(() => {
       console.log('🔍 Verificación tardía de Socket.IO:', this.socketService.isConnected());
@@ -115,6 +150,9 @@ export class PedidosComponent implements OnInit, OnDestroy {
     }
     if (this.pedidoCreadoHandler) {
       this.socketService.off('pedidoCreado', this.pedidoCreadoHandler);
+    }
+    if (this.pedidoActualizadoHandler) {
+      this.socketService.off('pedidoActualizado', this.pedidoActualizadoHandler);
     }
   }
 
@@ -129,11 +167,62 @@ export class PedidosComponent implements OnInit, OnDestroy {
     });
   }
 
+  getImagenUrl(imagen?: string): string {
+    if (!imagen) return '';
+    if (imagen.startsWith('http') || imagen.startsWith('data:')) return imagen;
+    const base = (environment.apiUrl || '').replace(/\/$/, '');
+    // Normalizar rutas guardadas antiguas que solo tienen el nombre del archivo
+    const normalized = imagen.startsWith('/')
+      ? imagen
+      : (imagen.includes('/uploads/') ? `/${imagen}` : `/uploads/products/${imagen}`);
+    return `${base}${normalized}`;
+  }
+
+  verImagen(imagen?: string): void {
+    const url = this.getImagenUrl(imagen);
+    if (!url) return;
+    this.imagenSeleccionadaUrl = url;
+    this.mostrarImagenModal = true;
+  }
+
+  ocultarImagen(): void {
+    this.mostrarImagenModal = false;
+    this.imagenSeleccionadaUrl = '';
+  }
+
+  onPressStart(imagen?: string): void {
+    this.verImagen(imagen);
+    window.addEventListener('mouseup', this.endPressHandler, { once: true } as any);
+    window.addEventListener('blur', this.endPressHandler, { once: true } as any);
+  }
+
+  onPressEnd(): void {
+    this.ocultarImagen();
+    window.removeEventListener('mouseup', this.endPressHandler);
+    window.removeEventListener('blur', this.endPressHandler);
+  }
+
   cargarPedidos(): void {
     this.cargando = true;
     this.pedidoService.getPedidos().subscribe({
       next: (response) => {
-        this.pedidos = response.data;
+        // Ordenar por prioridad de estado y luego por fecha (más nuevos primero)
+        const prioridad: Record<string, number> = {
+          'Pendiente': 1,
+          'En preparación': 2,
+          'Listo': 3,
+          'Entregado': 4,
+          'Cancelado': 5
+        };
+        const pedidos = response.data || [];
+        this.pedidos = pedidos.sort((a: any, b: any) => {
+          const pa = prioridad[a?.estado] ?? 99;
+          const pb = prioridad[b?.estado] ?? 99;
+          if (pa !== pb) return pa - pb;
+          const ta = a?.fecha ? new Date(a.fecha).getTime() : 0;
+          const tb = b?.fecha ? new Date(b.fecha).getTime() : 0;
+          return tb - ta;
+        });
         this.cargando = false;
       },
       error: (error) => {
@@ -266,8 +355,8 @@ export class PedidosComponent implements OnInit, OnDestroy {
 
   getEstadoColor(estado: string): string {
     switch (estado) {
-      case 'Pendiente': return 'bg-yellow-100 text-yellow-800';
-      case 'En preparación': return 'bg-blue-100 text-blue-800';
+      case 'Pendiente': return 'bg-yellow-100 text-yellow-800 animate-blink';
+      case 'En preparación': return 'bg-blue-100 text-blue-800 animate-blink';
       case 'Listo': return 'bg-green-100 text-green-800';
       case 'Entregado': return 'bg-gray-100 text-gray-800';
       case 'Cancelado': return 'bg-red-100 text-red-800';

@@ -21,11 +21,30 @@ export class ProductoService {
     return this.http.get<ProductoSingleResponse>(`${this.apiUrl}/${id}`);
   }
 
-  createProducto(producto: Producto): Observable<ProductoSingleResponse> {
+  createProducto(producto: Producto, imagenFile?: File): Observable<ProductoSingleResponse> {
+    // Si hay archivo, usar FormData; si no, enviar JSON normal
+    if (imagenFile) {
+      const form = new FormData();
+      form.append('nombre', producto.nombre);
+      form.append('precio', String(producto.precio));
+      if (producto.categoria) form.append('categoria', producto.categoria);
+      if (producto.descripcion) form.append('descripcion', producto.descripcion);
+      form.append('imagen', imagenFile);
+      return this.http.post<ProductoSingleResponse>(this.apiUrl, form);
+    }
     return this.http.post<ProductoSingleResponse>(this.apiUrl, producto);
   }
 
-  updateProducto(id: number, producto: Producto): Observable<ProductoSingleResponse> {
+  updateProducto(id: number, producto: Producto, imagenFile?: File): Observable<ProductoSingleResponse> {
+    if (imagenFile) {
+      const form = new FormData();
+      if (producto.nombre) form.append('nombre', producto.nombre);
+      if (producto.precio !== undefined) form.append('precio', String(producto.precio));
+      if (producto.categoria !== undefined) form.append('categoria', producto.categoria || '');
+      if (producto.descripcion !== undefined) form.append('descripcion', producto.descripcion || '');
+      form.append('imagen', imagenFile);
+      return this.http.put<ProductoSingleResponse>(`${this.apiUrl}/${id}`, form);
+    }
     return this.http.put<ProductoSingleResponse>(`${this.apiUrl}/${id}`, producto);
   }
 

@@ -7,6 +7,7 @@ const { Server } = require('socket.io');
 const productosRoutes = require('./routes/productos');
 const pedidosRoutes = require('./routes/pedidos');
 const analyticsRoutes = require('./routes/analytics');
+const categoriasRoutes = require('./routes/categorias');
 
 // Importar configuración de base de datos
 const { initializeDatabase } = require('./database');
@@ -112,6 +113,7 @@ app.use(cors({
 app.use('/api/productos', productosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/categorias', categoriasRoutes);
 
 // Ruta base de prueba
 app.get('/', (req, res) => {
@@ -120,7 +122,8 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       productos: 'api/productos',
-      pedidos: 'api/pedidos'
+      pedidos: 'api/pedidos',
+      categorias: 'api/categorias'
     }
   });
 });
@@ -131,6 +134,9 @@ app.get('/', (req, res) => {
 const path = require('path');
 const angularDistPath = path.join(__dirname, '../frontend/pedidos-local/dist/pedidos-local');
 app.use(express.static(angularDistPath));
+// Servir archivos subidos (imágenes)
+const uploadsPath = path.join(__dirname, 'uploads');
+app.use('/uploads', express.static(uploadsPath));
 // Catch-all: devolver index.html para rutas no API
 app.get('*', (req, res) => {
   res.sendFile(path.join(angularDistPath, 'index.html'));
