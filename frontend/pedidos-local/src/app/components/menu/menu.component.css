@@ -1,0 +1,32 @@
+.card:hover {
+  transform: translateY(-1px);
+}
+
+/* Banner estilo madera con acentos dorados y negros */
+.menu-banner {
+  background: linear-gradient(135deg, #2a1e12 0%, #3b2a18 35%, #4b3520 70%, #2a1e12 100%);
+  border: 1px solid rgba(0,0,0,0.35);
+  position: relative;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.04);
+}
+
+.menu-title {
+  color: #d4af37; /* dorado */
+  text-shadow: 0 1px 0 rgba(0,0,0,0.7), 0 0 12px rgba(212,175,55,0.35);
+  letter-spacing: 0.5px;
+  font-weight: 800;
+  font-size: 1.6rem;
+}
+
+@media (min-width: 640px) {
+  .menu-title { font-size: 2rem; }
+}
+
+.menu-banner-bottom {
+  height: 6px;
+  margin-top: 14px;
+  background: linear-gradient(90deg, rgba(0,0,0,0.35), #d4af37 20%, rgba(212,175,55,0.35) 50%, #d4af37 80%, rgba(0,0,0,0.35));
+  border-radius: 9999px;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.35);
+}
+

@@ -1,0 +1,49 @@
+<div class="min-h-screen bg-gray-50 p-4">
+  <div class="max-w-7xl mx-auto">
+    <div class="rounded-lg shadow-sm p-6 mb-6 menu-banner">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 class="menu-title">🥩 MENÚ – El Barril & Brasa Bar</h1>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
+          <select [(ngModel)]="categoriaFiltro" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Todas las categorías</option>
+            <option *ngFor="let c of categorias" [value]="c">{{ c }}</option>
+          </select>
+          <input [(ngModel)]="busqueda" type="text" placeholder="Buscar..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+          <button (click)="cargarProductos()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg">Refrescar</button>
+        </div>
+      </div>
+      <div class="menu-banner-bottom"></div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm p-6">
+      <div *ngIf="cargando" class="text-center py-8">
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <p class="mt-2 text-gray-600">Cargando menú...</p>
+      </div>
+
+      <div *ngIf="!cargando && filtrar().length === 0" class="text-center py-10 text-gray-500">
+        No hay productos para mostrar
+      </div>
+
+      <div *ngIf="!cargando && filtrar().length > 0" class="space-y-8">
+        <div *ngFor="let grupo of categoriasAgrupadas()">
+          <h2 class="text-xl font-bold text-gray-900 mb-3">{{ grupo.categoria }}</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div *ngFor="let p of grupo.productos" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div *ngIf="p.imagen" class="mb-3">
+                <img [src]="getImagenUrl(p.imagen)" alt="{{ p.nombre }}" class="w-full h-40 object-cover rounded border border-gray-200" />
+              </div>
+              <div class="flex items-start justify-between mb-2">
+                <h3 class="text-lg font-semibold text-gray-900">{{ p.nombre }}</h3>
+                <span class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">${{ p.precio | number:'1.2-2' }}</span>
+              </div>
+              <p class="text-sm text-gray-600" *ngIf="p.descripcion">{{ p.descripcion }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
