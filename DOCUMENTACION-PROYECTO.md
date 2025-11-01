@@ -29,6 +29,7 @@
 - ✅ Subida de imágenes locales para productos
 - ✅ Menú público organizado por categorías con diseño elegante
 - ✅ Creación y seguimiento de pedidos con ordenamiento inteligente
+- ✅ Código QR para seguimiento automático de pedidos
 - ✅ Dashboard con analytics y estadísticas
 - ✅ Actualizaciones en tiempo real mediante Socket.IO
 - ✅ Base de datos local con SQLite
@@ -77,6 +78,8 @@
 - **Tailwind CSS** (v3.4+): Framework de utilidades CSS
 - **Socket.IO Client** (v4.8+): Cliente para Socket.IO
 - **RxJS** (v7.8+): Librería reactiva para programación asíncrona
+- **angularx-qrcode** (v18.0.0): Componente Angular para generación de códigos QR
+- **qrcode** (v1.5+): Librería JavaScript para generación de códigos QR
 
 ### 3.3 Herramientas de Desarrollo
 - **Nodemon** (v3.0+): Auto-reinicio del servidor en desarrollo
@@ -216,7 +219,13 @@ Ubicación: `backend/database.js`
 
 #### Funciones de Analytics
 - `getVentasPorPeriodo(periodo, callback)`: Obtiene ventas por período (dia, semana, mes)
-- `getProductosMasVendidos(limite, callback)`: Productos más vendidos
+- `getProductosMasVendidos(limite, callback)`: Productos más vendidos con filtrado avanzado:
+  - Excluye pedidos cancelados
+  - Excluye productos con cantidad 0 o NULL
+  - Excluye productos con subtotal 0 o NULL
+  - Filtra con HAVING para mostrar solo productos con ventas reales
+  - Convierte valores a tipos numéricos apropiados (parseFloat, parseInt)
+  - Filtrado adicional en JavaScript para mayor seguridad
 - `getClientesMasFrecuentes(limite, callback)`: Clientes más frecuentes
 - `getIngresosTotales(callback)`: Ingresos totales y estadísticas
 - `getEstadoPedidos(callback)`: Distribución de estados
@@ -459,6 +468,7 @@ Obtiene lista de todos los clientes únicos.
 - Mostrar lista de productos disponibles
 - Gestionar carrito de compras
 - Crear nuevos pedidos
+- Generar código QR para seguimiento de pedidos
 - Mostrar lista de pedidos recientes
 - Actualizar estados de pedidos
 
@@ -466,6 +476,9 @@ Obtiene lista de todos los clientes únicos.
 - Suscripción a eventos Socket.IO (`pedidoCreado`, `productoCreado`)
 - Formularios reactivos para crear pedidos
 - Cálculo automático de totales
+- Generación automática de código QR al crear pedido
+- Modal de confirmación con código QR visible e imprimible
+- URL de seguimiento generada automáticamente: `${window.location.origin}/seguimiento?codigo=${codigo}`
 
 #### ProductosComponent (`components/productos/`)
 **Responsabilidades:**
@@ -475,8 +488,14 @@ Obtiene lista de todos los clientes únicos.
 #### SeguimientoComponent (`components/seguimiento/`)
 **Responsabilidades:**
 - Consultar pedidos por código público
+- Búsqueda automática cuando se accede mediante código QR (query param `codigo`)
 - Mostrar estado en tiempo real
 - Suscripción a actualizaciones de estado
+
+**Características:**
+- Lectura automática de código desde URL (`/seguimiento?codigo=ABC12`)
+- Búsqueda automática al detectar código en query params
+- Interfaz limpia y responsive para seguimiento de pedidos
 
 #### DashboardComponent (`components/dashboard/`)
 **Responsabilidades:**
@@ -710,6 +729,8 @@ db.get(`
 - ✅ Crear pedidos con múltiples productos
 - ✅ Cálculo automático de totales
 - ✅ Código de seguimiento único por pedido
+- ✅ Generación automática de código QR con URL de seguimiento
+- ✅ Modal de confirmación con código QR visible e imprimible
 - ✅ Actualización de estados con sincronización en tiempo real en todas las vistas
 - ✅ Ordenamiento inteligente: primero por prioridad de estado (Pendiente, En preparación, etc.), luego por fecha (más nuevos primero)
 - ✅ Indicadores visuales: estados "Pendiente" y "En preparación" con animación de parpadeo
@@ -718,6 +739,8 @@ db.get(`
 
 ### 9.3 Seguimiento de Pedidos
 - ✅ Consulta por código público
+- ✅ Código QR para acceso rápido (generado automáticamente al crear pedido)
+- ✅ Búsqueda automática cuando se accede mediante código QR
 - ✅ Visualización de estado en tiempo real
 - ✅ Actualizaciones instantáneas sin refrescar página
 - ✅ Información completa: productos, total, fecha
@@ -726,6 +749,8 @@ db.get(`
 - ✅ Vista general de métricas del negocio
 - ✅ Ingresos totales y promedios
 - ✅ Productos y clientes más frecuentes
+  - Lista de productos más vendidos con filtrado mejorado (excluye productos sin ventas reales)
+  - Validación de datos para mostrar solo productos con ventas válidas
 - ✅ Gráficos de ventas por período
 - ✅ Filtros avanzados de pedidos
 - ✅ Tendencia de ventas de últimos 30 días
@@ -1012,6 +1037,14 @@ Lista de productos más populares con métricas:
 - Veces que ha sido pedido
 - Ingresos generados
 
+**Nota:** La consulta SQL está optimizada para:
+- Excluir productos con cantidad 0 o NULL
+- Excluir pedidos cancelados
+- Excluir productos con subtotal 0 o NULL
+- Mostrar solo productos con ventas reales (HAVING SUM(cantidad) > 0)
+- Filtrar resultados duplicados en JavaScript para mayor seguridad
+- Asegurar que todos los valores numéricos sean números válidos (no strings)
+
 #### Top Clientes Más Frecuentes
 Clientes con mayor actividad:
 - Total de pedidos realizados
@@ -1215,13 +1248,39 @@ MIT License - Ver archivo LICENSE para más detalles.
 
 ---
 
-**Versión de la Documentación:** 3.0  
+**Versión de la Documentación:** 3.2  
 **Última actualización:** Enero 2025  
 **Autor:** Equipo de Desarrollo PedidosLocal
 
 ---
 
 ## 📝 Notas de Versión
+
+### Versión 3.2 (Enero 2025)
+- ✅ Documentación actualizada con todas las mejoras recientes
+- ✅ Sección de Dashboard y Analytics ampliada con detalles de filtrado mejorado
+- ✅ Funciones de base de datos documentadas con mejoras de validación
+
+### Versión 3.1 (Enero 2025)
+- ✅ **Código QR para seguimiento de pedidos** (nueva funcionalidad):
+  - Integración de `angularx-qrcode` (v18.0.0) para generación de códigos QR
+  - Generación automática de código QR al crear un pedido
+  - Modal de confirmación mejorado con código QR visible e imprimible (200x200px)
+  - URL de seguimiento con formato: `${origin}/seguimiento?codigo=${codigo}`
+  - Búsqueda automática en página de seguimiento al detectar código en query params
+  - Lectura automática de `codigo` desde `ActivatedRoute.queryParams` en `ngOnInit`
+  - Experiencia mejorada para clientes: escanean QR y acceden directamente al seguimiento
+  - Componente `SeguimientoComponent` actualizado para leer query params automáticamente
+
+- ✅ **Corrección de Productos Más Vendidos en Dashboard**:
+  - Filtrado mejorado para excluir productos sin ventas reales
+  - Exclusión de pedidos cancelados en la consulta SQL
+  - Validación de cantidad > 0 y subtotal > 0
+  - Uso de cláusula HAVING para filtrar productos con SUM(cantidad) > 0
+  - Filtrado adicional en JavaScript para mayor seguridad
+  - Conversión explícita de valores a tipos numéricos (parseFloat, parseInt)
+  - Solución al problema de productos mostrando 0.0 o sin ventas
+  - Mensaje informativo cuando no hay productos vendidos para mostrar
 
 ### Versión 3.0 (Enero 2025)
 - ✅ Sistema de categorías: tabla dedicada y API REST completa
