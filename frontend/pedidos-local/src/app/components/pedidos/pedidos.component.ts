@@ -31,6 +31,7 @@ export class PedidosComponent implements OnInit, OnDestroy {
   pedidosGrupoActual: Pedido[] = [];
   grupoActual: PedidoAgrupado | null = null;
   cargandoGrupo: boolean = false;
+  mostrarCarritoMovil: boolean = false;
   private endPressHandler = () => this.onPressEnd();
 
   // Formulario de pedido
@@ -357,12 +358,22 @@ export class PedidosComponent implements OnInit, OnDestroy {
       };
       this.carrito.push(nuevoItem);
     }
+    
+    // Expandir automáticamente el carrito móvil cuando se agrega un producto
+    // Solo en pantallas pequeñas (verificamos el ancho de la ventana)
+    if (window.innerWidth < 1024) {
+      this.mostrarCarritoMovil = true;
+    }
   }
 
   quitarDelCarrito(id: number): void {
     const index = this.carrito.findIndex(item => item.id === id);
     if (index > -1) {
       this.carrito.splice(index, 1);
+      // Si el carrito queda vacío, cerrar el carrito móvil
+      if (this.carrito.length === 0) {
+        this.mostrarCarritoMovil = false;
+      }
     }
   }
 
@@ -404,6 +415,8 @@ export class PedidosComponent implements OnInit, OnDestroy {
     };
     this.codigoGenerado = '';
     this.urlSeguimiento = '';
+    // Cerrar el carrito móvil después de crear el pedido
+    this.mostrarCarritoMovil = false;
   }
 
   crearPedido(): void {
@@ -420,6 +433,7 @@ export class PedidosComponent implements OnInit, OnDestroy {
         const baseUrl = window.location.origin;
         this.urlSeguimiento = `${baseUrl}/seguimiento?codigo=${this.codigoGenerado}`;
         this.carrito = [];
+        this.mostrarCarritoMovil = false; // Cerrar carrito móvil después de crear pedido
         this.cargarPedidos();
         this.cargando = false;
         this.mostrarFormulario = false;
@@ -503,6 +517,7 @@ export class PedidosComponent implements OnInit, OnDestroy {
 
   limpiarCarrito(): void {
     this.carrito = [];
+    this.mostrarCarritoMovil = false;
   }
 
   getProductoNombre(id: number): string {

@@ -29,6 +29,7 @@
 - ✅ Subida de imágenes locales para productos
 - ✅ Menú público organizado por categorías con diseño elegante
 - ✅ Creación y seguimiento de pedidos con ordenamiento inteligente
+- ✅ Carrito de compras flotante optimizado para móviles
 - ✅ Código QR para seguimiento automático de pedidos
 - ✅ Dashboard con analytics y estadísticas
 - ✅ Actualizaciones en tiempo real mediante Socket.IO
@@ -466,7 +467,7 @@ Obtiene lista de todos los clientes únicos.
 #### PedidosComponent (`components/pedidos/`)
 **Responsabilidades:**
 - Mostrar lista de productos disponibles
-- Gestionar carrito de compras
+- Gestionar carrito de compras con interfaz responsive
 - Crear nuevos pedidos
 - Generar código QR para seguimiento de pedidos
 - Mostrar lista de pedidos recientes
@@ -479,6 +480,18 @@ Obtiene lista de todos los clientes únicos.
 - Generación automática de código QR al crear pedido
 - Modal de confirmación con código QR visible e imprimible
 - URL de seguimiento generada automáticamente: `${window.location.origin}/seguimiento?codigo=${codigo}`
+- **Carrito flotante para móviles:**
+  - Componente fijo en la parte inferior (`fixed bottom-0`) visible solo en pantallas pequeñas
+  - Header colapsable con información resumida (cantidad de items, total)
+  - Expansión automática cuando se agrega un producto (`mostrarCarritoMovil` se activa automáticamente)
+  - Panel expandible con scroll personalizado (máximo 60vh)
+  - Gestión completa de productos: agregar, modificar cantidad, eliminar
+  - Cierre automático cuando el carrito queda vacío o se crea un pedido
+  - Animaciones CSS (`slideUp`, `fadeInDown`) para transiciones suaves
+- **Carrito sticky para desktop:**
+  - Panel lateral sticky en el sidebar (`sticky top-6`)
+  - Mantiene funcionalidad original del carrito
+  - Visible solo en pantallas grandes (`lg:block`)
 
 #### ProductosComponent (`components/productos/`)
 **Responsabilidades:**
@@ -572,7 +585,27 @@ export class AnalyticsService {
 }
 ```
 
-### 7.3 Modelos TypeScript
+### 7.3 Estilos CSS y Animaciones
+
+#### PedidosComponent (`components/pedidos/pedidos.component.css`)
+
+**Animaciones del Carrito Móvil:**
+- `slideUp`: Animación de entrada del carrito desde la parte inferior
+- `fadeInDown`: Animación de expansión del contenido del carrito
+- Scroll personalizado optimizado para dispositivos táctiles
+- Transiciones suaves para mejor experiencia de usuario
+
+**Clases CSS personalizadas:**
+- `.cart-mobile-container`: Contenedor fijo del carrito móvil
+- `.cart-mobile-content`: Contenido expandible del carrito con scroll
+- `.mb-24`: Margen inferior aplicado al panel de productos en móviles para evitar solapamiento
+
+**Responsive Design:**
+- Carrito móvil visible solo en pantallas < 1024px
+- Carrito sticky en sidebar para pantallas >= 1024px
+- Z-index configurado (z-40) para asegurar visibilidad sobre otros elementos
+
+### 7.4 Modelos TypeScript
 
 Ubicación: `models/`
 
@@ -731,6 +764,16 @@ db.get(`
 - ✅ Código de seguimiento único por pedido
 - ✅ Generación automática de código QR con URL de seguimiento
 - ✅ Modal de confirmación con código QR visible e imprimible
+- ✅ **Carrito de compras flotante para móviles:**
+  - Carrito fijo en la parte inferior cuando hay productos (solo en pantallas pequeñas)
+  - Header colapsable con resumen (cantidad de items y total)
+  - Expansión automática al agregar productos
+  - Panel expandible con scroll para listar productos
+  - Controles de cantidad y eliminación de productos
+  - Footer fijo con total y botón "Crear Pedido"
+  - Cierre automático cuando el carrito queda vacío o se crea un pedido
+  - Animaciones suaves para mejor experiencia de usuario
+  - Carrito sticky en sidebar para desktop (mantiene funcionalidad original)
 - ✅ Actualización de estados con sincronización en tiempo real en todas las vistas
 - ✅ Ordenamiento inteligente: primero por prioridad de estado (Pendiente, En preparación, etc.), luego por fecha (más nuevos primero)
 - ✅ Indicadores visuales: estados "Pendiente" y "En preparación" con animación de parpadeo
@@ -1248,13 +1291,28 @@ MIT License - Ver archivo LICENSE para más detalles.
 
 ---
 
-**Versión de la Documentación:** 3.2  
+**Versión de la Documentación:** 3.3  
 **Última actualización:** Enero 2025  
 **Autor:** Equipo de Desarrollo PedidosLocal
 
 ---
 
 ## 📝 Notas de Versión
+
+### Versión 3.3 (Enero 2025)
+- ✅ **Carrito de compras flotante para móviles** (mejora de UX):
+  - Carrito fijo en la parte inferior de la pantalla cuando hay productos (solo en móviles/tablets)
+  - Header colapsable con información resumida: cantidad de items y total
+  - Expansión automática al agregar productos al carrito
+  - Panel expandible con scroll personalizado (máximo 60vh)
+  - Controles completos: modificar cantidades, eliminar productos, limpiar carrito
+  - Footer fijo con total destacado y botón prominente "Crear Pedido"
+  - Cierre automático cuando el carrito queda vacío o se crea un pedido exitosamente
+  - Animaciones CSS suaves (`slideUp`, `fadeInDown`) para mejor experiencia
+  - Carrito sticky en sidebar para desktop (mantiene funcionalidad original)
+  - Margen inferior en panel de productos para evitar solapamiento con carrito móvil
+  - Diseño responsive optimizado: visible solo en pantallas < 1024px
+  - Mejora significativa en la experiencia de usuario en dispositivos móviles
 
 ### Versión 3.2 (Enero 2025)
 - ✅ Documentación actualizada con todas las mejoras recientes
