@@ -255,12 +255,20 @@
       <h2 class="text-xl font-bold text-gray-900 mb-2">¡Pedido Creado!</h2>
       <p class="text-gray-600 mb-4">El código de seguimiento es:</p>
       
-      <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-6">
+      <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4">
         <span class="text-3xl font-bold text-blue-600">{{ codigoGenerado }}</span>
       </div>
       
+      <!-- Código QR -->
+      <div class="mb-4 flex flex-col items-center">
+        <p class="text-sm font-medium text-gray-700 mb-2">Escanea el código QR para seguir tu pedido:</p>
+        <div class="bg-white p-3 rounded-lg border-2 border-gray-200 inline-block">
+          <qrcode [qrdata]="urlSeguimiento" [width]="200" [errorCorrectionLevel]="'M'" [margin]="2"></qrcode>
+        </div>
+      </div>
+      
       <p class="text-sm text-gray-600 mb-6">
-        Comparte este código con el cliente para que pueda hacer seguimiento de su pedido.
+        Comparte este código o el QR con el cliente para que pueda hacer seguimiento de su pedido.
       </p>
       
       <button 

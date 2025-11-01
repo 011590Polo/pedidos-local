@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { QRCodeModule } from 'angularx-qrcode';
 import { ProductoService } from '../../services/producto.service';
 import { SocketService } from '../../services/socket.service';
 import { PedidoService } from '../../services/pedido.service';
@@ -11,7 +12,7 @@ import { Pedido, PedidoRequest, ProductoPedido, PedidoAgrupado } from '../../mod
 @Component({
   selector: 'app-pedidos',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, QRCodeModule],
   templateUrl: './pedidos.component.html',
   styleUrls: ['./pedidos.component.css']
 })
@@ -23,6 +24,7 @@ export class PedidosComponent implements OnInit, OnDestroy {
   cargando: boolean = false;
   mostrarFormulario: boolean = false;
   codigoGenerado: string = '';
+  urlSeguimiento: string = '';
   mostrarImagenModal: boolean = false;
   imagenSeleccionadaUrl: string = '';
   mostrarModalGrupo: boolean = false;
@@ -401,6 +403,7 @@ export class PedidosComponent implements OnInit, OnDestroy {
       productos: []
     };
     this.codigoGenerado = '';
+    this.urlSeguimiento = '';
   }
 
   crearPedido(): void {
@@ -413,6 +416,9 @@ export class PedidosComponent implements OnInit, OnDestroy {
     this.pedidoService.createPedido(this.nuevoPedido).subscribe({
       next: (response) => {
         this.codigoGenerado = response.data.codigo_publico!;
+        // Generar URL para el QR que lleve a la página de seguimiento con el código
+        const baseUrl = window.location.origin;
+        this.urlSeguimiento = `${baseUrl}/seguimiento?codigo=${this.codigoGenerado}`;
         this.carrito = [];
         this.cargarPedidos();
         this.cargando = false;

@@ -1,6 +1,7 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { PedidoService } from '../../services/pedido.service';
 import { SocketService } from '../../services/socket.service';
 import { SeguimientoResponse } from '../../models/pedido.model';
@@ -12,14 +13,31 @@ import { SeguimientoResponse } from '../../models/pedido.model';
   templateUrl: './seguimiento.component.html',
   styleUrls: ['./seguimiento.component.css']
 })
-export class SeguimientoComponent implements OnDestroy {
+export class SeguimientoComponent implements OnInit, OnDestroy {
   codigo: string = '';
   cargando: boolean = false;
   pedido: SeguimientoResponse['data'] | null = null;
   error: string = '';
   private pedidoActualizadoHandler: ((p: any) => void) | null = null;
 
-  constructor(private pedidoService: PedidoService, private socketService: SocketService) { }
+  constructor(
+    private pedidoService: PedidoService,
+    private socketService: SocketService,
+    private route: ActivatedRoute,
+    private router: Router
+  ) { }
+
+  ngOnInit(): void {
+    // Leer el código desde los query params
+    this.route.queryParams.subscribe(params => {
+      const codigoParam = params['codigo'];
+      if (codigoParam && codigoParam.trim()) {
+        this.codigo = codigoParam.trim().toUpperCase();
+        // Buscar automáticamente el pedido
+        this.buscarPedido();
+      }
+    });
+  }
 
   buscarPedido(): void {
     if (!this.codigo.trim()) {
