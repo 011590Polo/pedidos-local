@@ -17,6 +17,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
 function initializeDatabase() {
   return new Promise((resolve, reject) => {
     createTables()
+      .then(() => migrateDatabase())
       .then(() => {
         console.log('✅ Base de datos inicializada correctamente');
         resolve();
@@ -25,6 +26,36 @@ function initializeDatabase() {
         console.error('❌ Error al inicializar la base de datos:', err);
         reject(err);
       });
+  });
+}
+
+// Función para migraciones de esquema
+function migrateDatabase() {
+  return new Promise((resolve, reject) => {
+    // Agregar columna estado a detalle_pedido si no existe
+    db.all("PRAGMA table_info(detalle_pedido)", (err, rows) => {
+      if (err) {
+        console.warn('⚠️ No se pudo verificar estructura de detalle_pedido:', err);
+        resolve(); // Continuar aunque falle
+        return;
+      }
+      
+      // Verificar si la columna estado existe
+      const tieneEstado = rows && rows.some(col => col.name === 'estado');
+      
+      if (!tieneEstado) {
+        db.run("ALTER TABLE detalle_pedido ADD COLUMN estado TEXT DEFAULT 'Pendiente'", (err) => {
+          if (err) {
+            console.warn('⚠️ No se pudo agregar columna estado a detalle_pedido:', err.message);
+          } else {
+            console.log('✅ Columna estado agregada a detalle_pedido');
+          }
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
   });
 }
 
@@ -68,6 +99,7 @@ function createTables() {
         id_producto INTEGER,
         cantidad INTEGER,
         subtotal REAL,
+        estado TEXT DEFAULT 'Pendiente',
         FOREIGN KEY (id_pedido) REFERENCES pedidos(id) ON DELETE CASCADE,
         FOREIGN KEY (id_producto) REFERENCES productos(id)
       )`
@@ -352,11 +384,12 @@ function createPedidoConReutilizacion(pedido, callback) {
 
 // Función para agregar detalle al pedido
 function addDetallePedido(detalle, callback) {
-  const { id_pedido, id_producto, cantidad, subtotal } = detalle;
+  const { id_pedido, id_producto, cantidad, subtotal, estado } = detalle;
+  const estadoDetalle = estado || 'Pendiente';
   
   db.run(
-    'INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, subtotal) VALUES (?, ?, ?, ?)',
-    [id_pedido, id_producto, cantidad, subtotal],
+    'INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, subtotal, estado) VALUES (?, ?, ?, ?, ?)',
+    [id_pedido, id_producto, cantidad, subtotal, estadoDetalle],
     callback
   );
 }
@@ -388,6 +421,33 @@ function getPedidoById(id, callback) {
   db.get('SELECT * FROM pedidos WHERE id = ?', [id], callback);
 }
 
+// Función para obtener detalles de un pedido con estados
+function getDetallesPedido(idPedido, callback) {
+  db.all(`
+    SELECT d.id, d.id_pedido, d.id_producto, d.cantidad, d.subtotal, d.estado,
+           pr.nombre as producto_nombre, pr.precio as producto_precio
+    FROM detalle_pedido d
+    LEFT JOIN productos pr ON d.id_producto = pr.id
+    WHERE d.id_pedido = ?
+    ORDER BY d.id ASC
+  `, [idPedido], callback);
+}
+
+// Función para actualizar estado de un detalle específico
+function updateDetalleEstado(idDetalle, nuevoEstado, callback) {
+  db.run(
+    'UPDATE detalle_pedido SET estado = ? WHERE id = ?',
+    [nuevoEstado, idDetalle],
+    function(err) {
+      if (err) {
+        callback(err, null);
+      } else {
+        callback(null, this.changes);
+      }
+    }
+  );
+}
+
 // Función para obtener pedido por código público
 function getPedidoByCodigo(codigo, callback) {
   db.get(`
@@ -401,6 +461,86 @@ function getPedidoByCodigo(codigo, callback) {
     WHERE p.codigo_publico = ?
     GROUP BY p.id
   `, [codigo], callback);
+}
+
+// Función para obtener pedidos agrupados por código público
+function getPedidosAgrupados(callback) {
+  db.all(`
+    SELECT 
+      p.codigo_publico,
+      p.cliente,
+      COUNT(DISTINCT p.id) as cantidad_pedidos,
+      MAX(p.fecha) as fecha_ultimo_pedido,
+      GROUP_CONCAT(DISTINCT p.id) as ids_pedidos,
+      SUM(p.total) as total_grupo,
+      GROUP_CONCAT(DISTINCT p.estado) as estados
+    FROM pedidos p
+    GROUP BY p.codigo_publico, p.cliente
+    ORDER BY MAX(p.fecha) DESC
+  `, (err, grupos) => {
+    if (err) {
+      callback(err, null);
+      return;
+    }
+    
+    // Procesar los resultados para incluir información adicional
+    const gruposProcesados = grupos.map(grupo => ({
+      codigo_publico: grupo.codigo_publico,
+      cliente: grupo.cliente,
+      cantidad_pedidos: grupo.cantidad_pedidos,
+      fecha_ultimo_pedido: grupo.fecha_ultimo_pedido,
+      ids_pedidos: grupo.ids_pedidos ? grupo.ids_pedidos.split(',').map(id => parseInt(id.trim())) : [],
+      total_grupo: grupo.total_grupo || 0,
+      estados: grupo.estados ? grupo.estados.split(',') : []
+    }));
+    
+    callback(null, gruposProcesados);
+  });
+}
+
+// Función para obtener todos los pedidos de un grupo por código público
+function getPedidosPorGrupo(codigo, callback) {
+  db.all(`
+    SELECT p.*, 
+           GROUP_CONCAT(d.cantidad || 'x ' || pr.nombre) as productos_string
+    FROM pedidos p
+    LEFT JOIN detalle_pedido d ON p.id = d.id_pedido
+    LEFT JOIN productos pr ON d.id_producto = pr.id
+    WHERE p.codigo_publico = ?
+    GROUP BY p.id
+    ORDER BY p.fecha DESC
+  `, [codigo], (err, pedidos) => {
+    if (err) {
+      callback(err, null);
+      return;
+    }
+    
+    // Para cada pedido, obtener sus detalles completos con estados
+    if (!pedidos || pedidos.length === 0) {
+      callback(null, []);
+      return;
+    }
+    
+    let completed = 0;
+    const pedidosConDetalles = [];
+    
+    pedidos.forEach((pedido, index) => {
+      getDetallesPedido(pedido.id, (err2, detalles) => {
+        if (!err2) {
+          pedido.detalles = detalles || [];
+        } else {
+          pedido.detalles = [];
+        }
+        
+        pedidosConDetalles[index] = pedido;
+        completed++;
+        
+        if (completed === pedidos.length) {
+          callback(null, pedidosConDetalles);
+        }
+      });
+    });
+  });
 }
 
 // Función para verificar si existe un pedido activo del mismo cliente en las últimas 6 horas
@@ -764,6 +904,10 @@ module.exports = {
   getPedidoById,
   getPedidoByCodigo,
   getPedidoActivoReciente,
+  getPedidosAgrupados,
+  getPedidosPorGrupo,
+  getDetallesPedido,
+  updateDetalleEstado,
   updatePedido,
   deletePedido,
   closeDatabase,

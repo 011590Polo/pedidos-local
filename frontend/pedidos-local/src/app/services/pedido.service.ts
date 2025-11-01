@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Pedido, PedidoRequest, PedidoResponse, PedidoSingleResponse, SeguimientoResponse } from '../models/pedido.model';
+import { Pedido, PedidoRequest, PedidoResponse, PedidoSingleResponse, SeguimientoResponse, DetallePedidoCompleto, PedidoAgrupado, PedidosAgrupadosResponse, PedidosGrupoResponse } from '../models/pedido.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -14,8 +14,9 @@ export class PedidoService {
 
   constructor(private http: HttpClient) { }
 
-  getPedidos(): Observable<PedidoResponse> {
-    return this.http.get<PedidoResponse>(this.apiUrl);
+  getPedidos(includeDetalles: boolean = false): Observable<PedidoResponse> {
+    const url = includeDetalles ? `${this.apiUrl}?include=detalles` : this.apiUrl;
+    return this.http.get<PedidoResponse>(url);
   }
 
   getPedido(id: number): Observable<PedidoSingleResponse> {
@@ -36,6 +37,22 @@ export class PedidoService {
 
   getPedidoByCodigo(codigo: string): Observable<SeguimientoResponse> {
     return this.http.get<SeguimientoResponse>(`${this.apiUrl}/seguimiento/${codigo}`);
+  }
+
+  getDetallesPedido(idPedido: number): Observable<{success: boolean, data: DetallePedidoCompleto[], count: number}> {
+    return this.http.get<{success: boolean, data: DetallePedidoCompleto[], count: number}>(`${this.apiUrl}/${idPedido}/detalles`);
+  }
+
+  updateEstadoDetalle(idPedido: number, idDetalle: number, estado: string): Observable<{success: boolean, message: string, data: any}> {
+    return this.http.put<{success: boolean, message: string, data: any}>(`${this.apiUrl}/${idPedido}/detalle/${idDetalle}`, { estado });
+  }
+
+  getPedidosAgrupados(): Observable<PedidosAgrupadosResponse> {
+    return this.http.get<PedidosAgrupadosResponse>(`${this.apiUrl}/agrupados`);
+  }
+
+  getPedidosPorGrupo(codigo: string): Observable<PedidosGrupoResponse> {
+    return this.http.get<PedidosGrupoResponse>(`${this.apiUrl}/grupo/${codigo}`);
   }
 }
 

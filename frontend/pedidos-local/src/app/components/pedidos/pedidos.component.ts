@@ -6,7 +6,7 @@ import { SocketService } from '../../services/socket.service';
 import { PedidoService } from '../../services/pedido.service';
 import { Producto } from '../../models/producto.model';
 import { environment } from '../../../environments/environment';
-import { Pedido, PedidoRequest, ProductoPedido } from '../../models/pedido.model';
+import { Pedido, PedidoRequest, ProductoPedido, PedidoAgrupado } from '../../models/pedido.model';
 
 @Component({
   selector: 'app-pedidos',
@@ -18,12 +18,17 @@ import { Pedido, PedidoRequest, ProductoPedido } from '../../models/pedido.model
 export class PedidosComponent implements OnInit, OnDestroy {
   productos: Producto[] = [];
   pedidos: Pedido[] = [];
+  pedidosAgrupados: PedidoAgrupado[] = [];
   carrito: ProductoPedido[] = [];
   cargando: boolean = false;
   mostrarFormulario: boolean = false;
   codigoGenerado: string = '';
   mostrarImagenModal: boolean = false;
   imagenSeleccionadaUrl: string = '';
+  mostrarModalGrupo: boolean = false;
+  pedidosGrupoActual: Pedido[] = [];
+  grupoActual: PedidoAgrupado | null = null;
+  cargandoGrupo: boolean = false;
   private endPressHandler = () => this.onPressEnd();
 
   // Formulario de pedido
@@ -37,6 +42,7 @@ export class PedidosComponent implements OnInit, OnDestroy {
   private productoCreadoHandler: ((p: any) => void) | null = null;
   private pedidoCreadoHandler: ((p: any) => void) | null = null;
   private pedidoActualizadoHandler: ((p: any) => void) | null = null;
+  private detallePedidoActualizadoHandler: ((p: any) => void) | null = null;
 
   constructor(
     private productoService: ProductoService,
@@ -107,9 +113,15 @@ export class PedidosComponent implements OnInit, OnDestroy {
       }
     };
     this.socketService.on('pedidoCreado', this.pedidoCreadoHandler);
+    
+    // Recargar pedidos agrupados cuando se crea un nuevo pedido
+    this.socketService.on('pedidoCreado', () => {
+      this.cargarPedidosAgrupados();
+    });
 
     // Suscripción a actualizaciones de pedidos (cambio de estado)
     this.pedidoActualizadoHandler = (payload: any) => {
+      // Actualizar pedido en la lista de pedidos individuales si existe
       const prioridad: Record<string, number> = {
         'Pendiente': 1,
         'En preparación': 2,
@@ -126,17 +138,49 @@ export class PedidosComponent implements OnInit, OnDestroy {
           fecha: payload.fecha ?? this.pedidos[idx].fecha
         } as any;
       }
-      // Reordenar por prioridad y fecha desc
-      this.pedidos = [...this.pedidos].sort((a: any, b: any) => {
-        const pa = prioridad[a?.estado] ?? 99;
-        const pb = prioridad[b?.estado] ?? 99;
-        if (pa !== pb) return pa - pb;
-        const ta = a?.fecha ? new Date(a.fecha).getTime() : 0;
-        const tb = b?.fecha ? new Date(b.fecha).getTime() : 0;
-        return tb - ta;
-      });
+      
+      // Actualizar pedido en el modal si está abierto
+      if (this.mostrarModalGrupo && this.pedidosGrupoActual.length > 0) {
+        const idxModal = this.pedidosGrupoActual.findIndex(p => p.id === payload.id);
+        if (idxModal !== -1) {
+          this.pedidosGrupoActual[idxModal] = {
+            ...this.pedidosGrupoActual[idxModal],
+            estado: payload.estado ?? this.pedidosGrupoActual[idxModal].estado,
+            total: payload.total ?? this.pedidosGrupoActual[idxModal].total,
+            fecha: payload.fecha ?? this.pedidosGrupoActual[idxModal].fecha
+          };
+          // Recargar el grupo para actualizar estados
+          if (this.grupoActual) {
+            this.verPedidosGrupo(this.grupoActual);
+          }
+        }
+      }
+      
+      // Recargar pedidos agrupados para reflejar cambios
+      this.cargarPedidosAgrupados();
     };
     this.socketService.on('pedidoActualizado', this.pedidoActualizadoHandler);
+
+    // Suscripción a actualizaciones de detalles de pedidos
+    this.detallePedidoActualizadoHandler = (payload: any) => {
+      const idx = this.pedidos.findIndex(p => p.id === payload.id_pedido);
+      if (idx !== -1) {
+        const pedido = this.pedidos[idx];
+        if (pedido.detalles && payload.detalles) {
+          pedido.detalles = payload.detalles;
+        } else if (payload.id_detalle) {
+          // Actualizar solo el detalle específico
+          if (!pedido.detalles) pedido.detalles = [];
+          const detIdx = pedido.detalles.findIndex((d: any) => d.id === payload.id_detalle);
+          if (detIdx !== -1) {
+            pedido.detalles[detIdx].estado = payload.nuevo_estado;
+          }
+        }
+        // Reordenar por prioridad
+        this.ordenarPedidos();
+      }
+    };
+    this.socketService.on('detallePedidoActualizado', this.detallePedidoActualizadoHandler);
 
     // Verificar conexión después de un tiempo
     setTimeout(() => {
@@ -154,6 +198,27 @@ export class PedidosComponent implements OnInit, OnDestroy {
     if (this.pedidoActualizadoHandler) {
       this.socketService.off('pedidoActualizado', this.pedidoActualizadoHandler);
     }
+    if (this.detallePedidoActualizadoHandler) {
+      this.socketService.off('detallePedidoActualizado', this.detallePedidoActualizadoHandler);
+    }
+  }
+
+  ordenarPedidos(): void {
+    const prioridad: Record<string, number> = {
+      'Pendiente': 1,
+      'En preparación': 2,
+      'Listo': 3,
+      'Entregado': 4,
+      'Cancelado': 5
+    };
+    this.pedidos = [...this.pedidos].sort((a: any, b: any) => {
+      const pa = prioridad[a?.estado] ?? 99;
+      const pb = prioridad[b?.estado] ?? 99;
+      if (pa !== pb) return pa - pb;
+      const ta = a?.fecha ? new Date(a.fecha).getTime() : 0;
+      const tb = b?.fecha ? new Date(b.fecha).getTime() : 0;
+      return tb - ta;
+    });
   }
 
   cargarProductos(): void {
@@ -203,33 +268,76 @@ export class PedidosComponent implements OnInit, OnDestroy {
   }
 
   cargarPedidos(): void {
+    // Mantener para compatibilidad con funcionalidad existente
+    this.cargarPedidosAgrupados();
+  }
+
+  cargarPedidosAgrupados(): void {
     this.cargando = true;
-    this.pedidoService.getPedidos().subscribe({
+    this.pedidoService.getPedidosAgrupados().subscribe({
       next: (response) => {
-        // Ordenar por prioridad de estado y luego por fecha (más nuevos primero)
-        const prioridad: Record<string, number> = {
-          'Pendiente': 1,
-          'En preparación': 2,
-          'Listo': 3,
-          'Entregado': 4,
-          'Cancelado': 5
-        };
-        const pedidos = response.data || [];
-        this.pedidos = pedidos.sort((a: any, b: any) => {
-          const pa = prioridad[a?.estado] ?? 99;
-          const pb = prioridad[b?.estado] ?? 99;
-          if (pa !== pb) return pa - pb;
-          const ta = a?.fecha ? new Date(a.fecha).getTime() : 0;
-          const tb = b?.fecha ? new Date(b.fecha).getTime() : 0;
-          return tb - ta;
+        this.pedidosAgrupados = response.data || [];
+        // Ordenar por fecha del último pedido (más nuevos primero)
+        this.pedidosAgrupados.sort((a, b) => {
+          const fechaA = new Date(a.fecha_ultimo_pedido).getTime();
+          const fechaB = new Date(b.fecha_ultimo_pedido).getTime();
+          return fechaB - fechaA;
         });
         this.cargando = false;
       },
       error: (error) => {
-        console.error('Error al cargar pedidos:', error);
+        console.error('Error al cargar pedidos agrupados:', error);
         this.cargando = false;
       }
     });
+  }
+
+  verPedidosGrupo(grupo: PedidoAgrupado): void {
+    this.grupoActual = grupo;
+    this.mostrarModalGrupo = true;
+    this.cargandoGrupo = true;
+    this.pedidoService.getPedidosPorGrupo(grupo.codigo_publico).subscribe({
+      next: (response) => {
+        this.pedidosGrupoActual = response.data || [];
+        // Ordenar por fecha descendente (más nuevos primero)
+        this.pedidosGrupoActual.sort((a, b) => {
+          const fechaA = new Date(a.fecha || 0).getTime();
+          const fechaB = new Date(b.fecha || 0).getTime();
+          return fechaB - fechaA;
+        });
+        this.cargandoGrupo = false;
+      },
+      error: (error) => {
+        console.error('Error al cargar pedidos del grupo:', error);
+        this.cargandoGrupo = false;
+      }
+    });
+  }
+
+  cerrarModalGrupo(): void {
+    this.mostrarModalGrupo = false;
+    this.pedidosGrupoActual = [];
+    this.grupoActual = null;
+  }
+
+  getEstadoGeneralGrupo(estados: string[]): string {
+    if (!estados || estados.length === 0) return 'Pendiente';
+    // Si hay algún pendiente o en preparación, mostrar el más prioritario
+    const prioridad: Record<string, number> = {
+      'Pendiente': 1,
+      'En preparación': 2,
+      'Listo': 3,
+      'Entregado': 4,
+      'Cancelado': 5
+    };
+    const estadosOrdenados = estados.sort((a, b) => {
+      return (prioridad[a] || 99) - (prioridad[b] || 99);
+    });
+    return estadosOrdenados[0];
+  }
+
+  tienePedidosPendientes(estados: string[]): boolean {
+    return estados && estados.some(e => e === 'Pendiente' || e === 'En preparación');
   }
 
   agregarAlCarrito(producto: Producto): void {
@@ -321,11 +429,54 @@ export class PedidosComponent implements OnInit, OnDestroy {
   actualizarEstadoPedido(id: number, nuevoEstado: string): void {
     this.pedidoService.updatePedido(id, { estado: nuevoEstado }).subscribe({
       next: () => {
-        this.cargarPedidos();
+        // Si el modal está abierto, recargar el grupo actual
+        if (this.mostrarModalGrupo && this.grupoActual) {
+          this.verPedidosGrupo(this.grupoActual);
+        }
+        // Recargar pedidos agrupados
+        this.cargarPedidosAgrupados();
       },
       error: (error) => {
         console.error('Error al actualizar estado:', error);
         alert('Error al actualizar el estado del pedido');
+      }
+    });
+  }
+
+  actualizarEstadoDetalle(idPedido: number, idDetalle: number, nuevoEstado: string): void {
+    this.pedidoService.updateEstadoDetalle(idPedido, idDetalle, nuevoEstado).subscribe({
+      next: (response) => {
+        // Actualizar localmente
+        const pedido = this.pedidos.find(p => p.id === idPedido);
+        if (pedido && pedido.detalles) {
+          const detalle = pedido.detalles.find((d: any) => d.id === idDetalle);
+          if (detalle) {
+            detalle.estado = nuevoEstado;
+          }
+          // También actualizar con los detalles completos si vienen en la respuesta
+          if (response.data && response.data.detalles) {
+            pedido.detalles = response.data.detalles;
+          }
+        }
+        
+        // Si el modal está abierto, recargar el grupo actual
+        if (this.mostrarModalGrupo && this.grupoActual) {
+          // Actualizar en el modal
+          const pedidoModal = this.pedidosGrupoActual.find(p => p.id === idPedido);
+          if (pedidoModal && response.data && response.data.detalles) {
+            pedidoModal.detalles = response.data.detalles;
+          }
+          // Recargar el grupo para reflejar cambios en estados agregados
+          this.verPedidosGrupo(this.grupoActual);
+        }
+        
+        this.ordenarPedidos();
+        // Recargar pedidos agrupados
+        this.cargarPedidosAgrupados();
+      },
+      error: (error) => {
+        console.error('Error al actualizar estado del detalle:', error);
+        alert('Error al actualizar el estado del detalle');
       }
     });
   }
@@ -364,5 +515,28 @@ export class PedidosComponent implements OnInit, OnDestroy {
     }
   }
 
+  getDetallesFormateados(pedido: any): Array<{id?: number, nombre: string, cantidad: number, estado: string}> {
+    if (pedido.detalles && pedido.detalles.length > 0) {
+      return pedido.detalles.map((d: any) => ({
+        id: d.id,
+        nombre: d.producto_nombre || this.getProductoNombre(d.id_producto),
+        cantidad: d.cantidad,
+        estado: d.estado || 'Pendiente'
+      }));
+    }
+    // Fallback al formato string si no hay detalles
+    if (pedido.productos) {
+      const productos = pedido.productos.split(', ').map((p: string) => {
+        const match = p.match(/^(\d+)x (.+)$/);
+        return match ? {
+          nombre: match[2],
+          cantidad: parseInt(match[1]),
+          estado: 'Pendiente' // Estado por defecto si no hay detalles
+        } : { nombre: p, cantidad: 1, estado: 'Pendiente' };
+      });
+      return productos;
+    }
+    return [];
+  }
 
 }

@@ -7,3 +7,95 @@
   animation: blinkSoft 1.2s ease-in-out infinite;
 }
 
+/* Animaciones para el modal */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.modal-backdrop {
+  animation: fadeIn 0.2s ease-out;
+  z-index: 9999;
+}
+
+.modal-content {
+  animation: slideIn 0.3s ease-out;
+  z-index: 10000;
+  position: relative;
+}
+
+/* Asegurar que los botones y elementos interactivos estén por encima */
+.modal-content button,
+.modal-content select {
+  position: relative;
+  z-index: 1;
+}
+
+/* Mejorar la apariencia de los botones deshabilitados */
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+button:disabled:hover {
+  transform: none !important;
+  background-color: inherit !important;
+}
+
+/* Mejorar la experiencia táctil */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Asegurar que los botones sean clickeables */
+.modal-content button {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.modal-content button:not(:disabled):active {
+  transform: scale(0.95);
+}
+
+/* Mejorar el scroll del modal */
+.modal-content .overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.modal-content .overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-content .overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-content .overflow-y-auto::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+}
+
+.modal-content .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.7);
+}
+
