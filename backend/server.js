@@ -74,6 +74,22 @@ io.on('connection', (socket) => {
 // ------------------------------------------------------
 // 🧩 MIDDLEWARES GLOBALES
 // ------------------------------------------------------
+
+// Middleware para desactivar caché en desarrollo
+// Detecta si es desarrollo: si no hay NODE_ENV o si es diferente de 'production'
+const isDevelopment = !process.env.NODE_ENV || process.env.NODE_ENV !== 'production';
+if (isDevelopment) {
+  console.log('🔧 Modo desarrollo: Caché desactivado');
+  app.use((req, res, next) => {
+    // Desactivar caché para todas las peticiones en desarrollo
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    next();
+  });
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -133,12 +149,38 @@ app.get('/', (req, res) => {
 // ------------------------------------------------------
 const path = require('path');
 const angularDistPath = path.join(__dirname, '../frontend/pedidos-local/dist/pedidos-local');
-app.use(express.static(angularDistPath));
+
 // Servir archivos subidos (imágenes)
 const uploadsPath = path.join(__dirname, 'uploads');
-app.use('/uploads', express.static(uploadsPath));
+
+// Configurar opciones de static files con headers de no-cache en desarrollo
+const staticOptions = isDevelopment ? {
+  etag: false,
+  lastModified: false,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+} : {};
+
+app.use(express.static(angularDistPath, staticOptions));
+
+// Servir archivos subidos (imágenes) - solo cache para imágenes en producción
+const uploadsOptions = isDevelopment ? {
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  }
+} : { maxAge: '1y' }; // Cache imágenes por 1 año en producción
+app.use('/uploads', express.static(uploadsPath, uploadsOptions));
+
 // Catch-all: devolver index.html para rutas no API
 app.get('*', (req, res) => {
+  if (isDevelopment) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
   res.sendFile(path.join(angularDistPath, 'index.html'));
 });
 
