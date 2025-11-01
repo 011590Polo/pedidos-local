@@ -680,13 +680,41 @@ function getProductosMasVendidos(limite = 10, callback) {
       COUNT(DISTINCT d.id_pedido) as veces_pedido,
       SUM(d.subtotal) as ingresos_generados
     FROM productos pr
-    JOIN detalle_pedido d ON pr.id = d.id_producto
-    JOIN pedidos p ON d.id_pedido = p.id
+    INNER JOIN detalle_pedido d ON pr.id = d.id_producto
+    INNER JOIN pedidos p ON d.id_pedido = p.id
     WHERE p.estado != 'Cancelado'
+      AND d.cantidad > 0
+      AND d.cantidad IS NOT NULL
+      AND d.subtotal IS NOT NULL
+      AND d.subtotal > 0
     GROUP BY pr.id, pr.nombre, pr.precio
-    ORDER BY total_vendido DESC
+    HAVING SUM(d.cantidad) > 0
+      AND SUM(d.subtotal) > 0
+    ORDER BY total_vendido DESC, ingresos_generados DESC
     LIMIT ?
-  `, [limite], callback);
+  `, [limite], (err, rows) => {
+    if (err) {
+      callback(err, null);
+      return;
+    }
+    // Filtrar y asegurar que los valores numéricos sean números, no strings
+    const productos = rows
+      .filter(row => {
+        const totalVendido = parseFloat(row.total_vendido) || 0;
+        const vecesPedido = parseInt(row.veces_pedido) || 0;
+        const ingresos = parseFloat(row.ingresos_generados) || 0;
+        return totalVendido > 0 && vecesPedido > 0 && ingresos >= 0;
+      })
+      .map(row => ({
+        id: row.id,
+        nombre: row.nombre,
+        precio: parseFloat(row.precio) || 0,
+        total_vendido: parseFloat(row.total_vendido) || 0,
+        veces_pedido: parseInt(row.veces_pedido) || 0,
+        ingresos_generados: parseFloat(row.ingresos_generados) || 0
+      }));
+    callback(null, productos);
+  });
 }
 
 // Función para obtener clientes que más compran

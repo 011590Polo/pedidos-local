@@ -107,7 +107,7 @@
     <!-- Productos Más Vendidos -->
     <div class="bg-white rounded-lg shadow p-6">
       <h2 class="text-xl font-bold text-gray-900 mb-4">🏆 Productos Más Vendidos</h2>
-      <div class="overflow-x-auto">
+      <div *ngIf="dashboardData.productosMasVendidos && dashboardData.productosMasVendidos.length > 0" class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
@@ -138,6 +138,9 @@
             </tr>
           </tbody>
         </table>
+      </div>
+      <div *ngIf="!dashboardData.productosMasVendidos || dashboardData.productosMasVendidos.length === 0" class="text-center py-8 text-gray-500">
+        <p>No hay productos vendidos para mostrar</p>
       </div>
     </div>
 
