@@ -2,47 +2,47 @@
   <!-- Navegación -->
 
   <nav class="bg-white shadow-sm border-b border-gray-200">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between h-16 items-center">
+    <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+      <div class="flex justify-between h-12 sm:h-14 lg:h-16 items-center">
         <div class="flex items-center">
           <div class="flex-shrink-0">
-            <h1 class="text-xl font-bold text-gray-900">🍽️ PedidosLocal</h1>
+            <h1 class="text-base sm:text-lg lg:text-xl font-bold text-gray-900">🍽️ PedidosLocal</h1>
           </div>
         </div>
         <!-- Botón hamburguesa para móviles -->
         <div class="sm:hidden">
-          <button (click)="menuOpen = !menuOpen" type="button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500" aria-controls="mobile-menu" aria-expanded="false">
+          <button (click)="menuOpen = !menuOpen" type="button" class="inline-flex items-center justify-center p-1.5 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500" aria-controls="mobile-menu" aria-expanded="false">
             <span class="sr-only">Abrir menú principal</span>
-            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path [attr.d]="menuOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
             </svg>
           </button>
         </div>
         <!-- Menú en escritorio -->
-        <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+        <div class="hidden sm:ml-4 lg:ml-6 sm:flex sm:space-x-4 lg:space-x-8">
           <a routerLink="/menu" 
              routerLinkActive="border-blue-500 text-blue-600" 
-             class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors">
+             class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors">
             🥩 Menú
           </a>
           <a routerLink="/pedidos" 
              routerLinkActive="border-blue-500 text-blue-600" 
-             class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors">
+             class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors">
             📋 Pedidos
           </a>
           <a routerLink="/productos" 
              routerLinkActive="border-blue-500 text-blue-600" 
-             class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors">
+             class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors">
             🍕 Productos
           </a>
           <a routerLink="/seguimiento" 
              routerLinkActive="border-blue-500 text-blue-600" 
-             class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors">
+             class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors">
             🔍 Seguimiento
           </a>
           <a routerLink="/dashboard" 
              routerLinkActive="border-blue-500 text-blue-600" 
-             class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors">
+             class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors">
             📊 Dashboard
           </a>
         </div>
@@ -50,12 +50,12 @@
     </div>
     <!-- Menú móvil -->
     <div class="sm:hidden" id="mobile-menu" *ngIf="menuOpen">
-      <div class="pt-2 pb-3 space-y-1">
-        <a routerLink="/menu" routerLinkActive="bg-blue-50 border-blue-500 text-blue-700" class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300">🥩 Menú</a>
-        <a routerLink="/pedidos" routerLinkActive="bg-blue-50 border-blue-500 text-blue-700" class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300">📋 Pedidos</a>
-        <a routerLink="/productos" routerLinkActive="bg-blue-50 border-blue-500 text-blue-700" class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300">🍕 Productos</a>
-        <a routerLink="/seguimiento" routerLinkActive="bg-blue-50 border-blue-500 text-blue-700" class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300">🔍 Seguimiento</a>
-        <a routerLink="/dashboard" routerLinkActive="bg-blue-50 border-blue-500 text-blue-700" class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300">📊 Dashboard</a>
+      <div class="pt-1 pb-2 space-y-0.5">
+        <a routerLink="/menu" routerLinkActive="bg-blue-50 border-blue-500 text-blue-700" class="block pl-3 pr-4 py-1.5 border-l-4 border-transparent text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300">🥩 Menú</a>
+        <a routerLink="/pedidos" routerLinkActive="bg-blue-50 border-blue-500 text-blue-700" class="block pl-3 pr-4 py-1.5 border-l-4 border-transparent text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300">📋 Pedidos</a>
+        <a routerLink="/productos" routerLinkActive="bg-blue-50 border-blue-500 text-blue-700" class="block pl-3 pr-4 py-1.5 border-l-4 border-transparent text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300">🍕 Productos</a>
+        <a routerLink="/seguimiento" routerLinkActive="bg-blue-50 border-blue-500 text-blue-700" class="block pl-3 pr-4 py-1.5 border-l-4 border-transparent text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300">🔍 Seguimiento</a>
+        <a routerLink="/dashboard" routerLinkActive="bg-blue-50 border-blue-500 text-blue-700" class="block pl-3 pr-4 py-1.5 border-l-4 border-transparent text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300">📊 Dashboard</a>
       </div>
     </div>
   </nav>

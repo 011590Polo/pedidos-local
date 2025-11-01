@@ -115,49 +115,49 @@
       <!-- Panel de Pedidos -->
       <div class="lg:col-span-1">
         <div class="bg-white rounded-lg shadow-sm p-6">
-          <h2 class="text-xl font-semibold text-gray-900 mb-4">Pedidos Recientes</h2>
+          <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">Pedidos Recientes</h2>
           
-          <div *ngIf="cargando" class="text-center py-4">
-            <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <div *ngIf="cargando" class="text-center py-3 sm:py-4">
+            <div class="inline-block animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-blue-600"></div>
           </div>
 
-          <div *ngIf="!cargando && pedidosAgrupados.length === 0" class="text-center py-8 text-gray-500">
+          <div *ngIf="!cargando && pedidosAgrupados.length === 0" class="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">
             <p>No hay pedidos</p>
           </div>
 
-          <div *ngIf="!cargando && pedidosAgrupados.length > 0" class="space-y-3 max-h-96 overflow-y-auto">
-            <div *ngFor="let grupo of pedidosAgrupados" class="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-md transition-shadow">
-              <div class="flex justify-between items-start mb-3">
-                <div class="flex-1">
-                  <h4 class="font-medium text-gray-900 mb-1">{{ grupo.cliente }}</h4>
-                  <p class="text-sm text-gray-600 mb-1">Código: <span class="font-mono font-semibold">{{ grupo.codigo_publico }}</span></p>
-                  <p class="text-xs text-gray-500" *ngIf="grupo.fecha_ultimo_pedido">
+          <div *ngIf="!cargando && pedidosAgrupados.length > 0" class="space-y-2 sm:space-y-3 max-h-96 overflow-y-auto">
+            <div *ngFor="let grupo of pedidosAgrupados" class="border border-gray-200 rounded-lg p-2.5 sm:p-3 lg:p-4 bg-white hover:shadow-md transition-shadow">
+              <div class="flex justify-between items-start mb-2 sm:mb-3">
+                <div class="flex-1 min-w-0 pr-2">
+                  <h4 class="font-medium text-gray-900 mb-0.5 sm:mb-1 text-sm sm:text-base truncate">{{ grupo.cliente }}</h4>
+                  <p class="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">Código: <span class="font-mono font-semibold">{{ grupo.codigo_publico }}</span></p>
+                  <p class="text-[10px] sm:text-xs text-gray-500" *ngIf="grupo.fecha_ultimo_pedido">
                     Último pedido: {{ grupo.fecha_ultimo_pedido | date:'short' }}
                   </p>
                 </div>
-                <div class="flex flex-col items-end space-y-1">
-                  <span [class]="'px-2 py-1 rounded-full text-xs font-medium ' + getEstadoColor(getEstadoGeneralGrupo(grupo.estados))">
+                <div class="flex flex-col items-end space-y-0.5 sm:space-y-1 flex-shrink-0">
+                  <span [class]="'px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium ' + getEstadoColor(getEstadoGeneralGrupo(grupo.estados))">
                     {{ getEstadoGeneralGrupo(grupo.estados) }}
                   </span>
                   <span *ngIf="tienePedidosPendientes(grupo.estados)" 
-                        class="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        class="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-yellow-100 text-yellow-800">
                     ⚠️ Pendientes
                   </span>
                 </div>
               </div>
               
-              <div class="mb-3">
-                <p class="text-sm font-semibold text-gray-700 mb-1">
+              <div class="mb-2 sm:mb-3">
+                <p class="text-xs sm:text-sm font-semibold text-gray-700 mb-0.5 sm:mb-1">
                   {{ grupo.cantidad_pedidos }} {{ grupo.cantidad_pedidos === 1 ? 'pedido agrupado' : 'pedidos agrupados' }}
                 </p>
-                <p class="text-sm text-gray-600">
-                  Total acumulado: <span class="font-bold text-green-600">${{ grupo.total_grupo | number:'1.2-2' }}</span>
+                <p class="text-xs sm:text-sm text-gray-600">
+                  Total: <span class="font-bold text-green-600">${{ grupo.total_grupo | number:'1.2-2' }}</span>
                 </p>
               </div>
               
               <button 
                 (click)="verPedidosGrupo(grupo)"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm">
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors text-xs sm:text-sm">
                 Ver pedidos
               </button>
             </div>
@@ -170,11 +170,11 @@
   <!-- Carrito Flotante para Móviles (Fixed en la parte inferior) -->
   <div *ngIf="carrito.length > 0" 
        class="fixed bottom-0 left-0 right-0 lg:hidden z-40 cart-mobile-container">
-    <div class="bg-white border-t-2 border-gray-200 shadow-2xl">
+    <div class="bg-white border-t-2 border-gray-200 shadow-2xl cart-mobile-wrapper">
       <!-- Header del Carrito Móvil (Colapsable) -->
       <button 
         (click)="mostrarCarritoMovil = !mostrarCarritoMovil"
-        class="w-full px-3 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white flex items-center justify-between">
+        class="w-full px-3 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white flex items-center justify-between cart-mobile-header">
         <div class="flex items-center space-x-2">
           <div class="bg-white/20 rounded-full p-1.5">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,41 +204,43 @@
 
       <!-- Contenido Expandido del Carrito -->
       <div *ngIf="mostrarCarritoMovil" 
-           class="max-h-[60vh] overflow-y-auto bg-white border-t border-gray-200 cart-mobile-content">
-        <div class="p-2 space-y-2">
-          <div *ngFor="let item of carrito" class="border border-gray-200 rounded-lg p-2 bg-gray-50">
-            <div class="flex justify-between items-start mb-1.5">
-              <div class="flex-1 min-w-0 pr-2">
-                <h4 class="font-medium text-gray-900 truncate text-xs">{{ getProductoNombre(item.id) }}</h4>
-                <p class="text-[10px] text-gray-600">${{ item.precio | number:'1.2-2' }} c/u</p>
-              </div>
-              <button 
-                (click)="quitarDelCarrito(item.id)"
-                class="text-red-600 hover:text-red-800 flex-shrink-0 p-0.5 text-sm">
-                ✕
-              </button>
-            </div>
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-2 bg-white rounded-lg px-1.5 py-0.5 border border-gray-300">
+           class="bg-white border-t border-gray-200 cart-mobile-content">
+        <div class="cart-mobile-products">
+          <div class="p-2 space-y-2">
+            <div *ngFor="let item of carrito" class="border border-gray-200 rounded-lg p-2 bg-gray-50">
+              <div class="flex justify-between items-start mb-1.5">
+                <div class="flex-1 min-w-0 pr-2">
+                  <h4 class="font-medium text-gray-900 truncate text-xs">{{ getProductoNombre(item.id) }}</h4>
+                  <p class="text-[10px] text-gray-600">${{ item.precio | number:'1.2-2' }} c/u</p>
+                </div>
                 <button 
-                  (click)="actualizarCantidad(item.id, item.cantidad - 1)"
-                  class="bg-gray-200 hover:bg-gray-300 text-gray-700 w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm touch-manipulation">
-                  -
-                </button>
-                <span class="w-8 text-center font-semibold text-xs">{{ item.cantidad }}</span>
-                <button 
-                  (click)="actualizarCantidad(item.id, item.cantidad + 1)"
-                  class="bg-gray-200 hover:bg-gray-300 text-gray-700 w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm touch-manipulation">
-                  +
+                  (click)="quitarDelCarrito(item.id)"
+                  class="text-red-600 hover:text-red-800 flex-shrink-0 p-0.5 text-sm">
+                  ✕
                 </button>
               </div>
-              <span class="font-bold text-green-600 text-sm">${{ item.subtotal | number:'1.2-2' }}</span>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2 bg-white rounded-lg px-1.5 py-0.5 border border-gray-300">
+                  <button 
+                    (click)="actualizarCantidad(item.id, item.cantidad - 1)"
+                    class="bg-gray-200 hover:bg-gray-300 text-gray-700 w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm touch-manipulation">
+                    -
+                  </button>
+                  <span class="w-8 text-center font-semibold text-xs">{{ item.cantidad }}</span>
+                  <button 
+                    (click)="actualizarCantidad(item.id, item.cantidad + 1)"
+                    class="bg-gray-200 hover:bg-gray-300 text-gray-700 w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm touch-manipulation">
+                    +
+                  </button>
+                </div>
+                <span class="font-bold text-green-600 text-sm">${{ item.subtotal | number:'1.2-2' }}</span>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Footer con Total y Botón -->
-        <div class="sticky bottom-0 bg-white border-t-2 border-gray-200 p-2.5 shadow-lg">
+        <div class="cart-mobile-footer bg-white border-t-2 border-gray-200 p-2.5 shadow-lg">
           <div class="flex justify-between items-center mb-2">
             <span class="text-sm font-bold text-gray-900">Total:</span>
             <span class="text-lg font-bold text-green-600">${{ getTotalCarrito() | number:'1.2-2' }}</span>
@@ -461,7 +463,7 @@
                    class="bg-gray-50 rounded-md sm:rounded-lg p-2 sm:p-3 border border-gray-200 hover:border-blue-300 transition-colors">
                 <div class="flex flex-col gap-2 sm:gap-3">
                   <div class="flex items-center gap-2 sm:gap-3 flex-1 flex-wrap">
-                    <span class="text-xs sm:text-sm font-semibold text-gray-900">
+                    <span class="text-xs sm:text-sm font-semibold text-gray-900 truncate">
                       {{ detalle.cantidad }}x {{ detalle.nombre }}
                     </span>
                     <span [class]="'px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium whitespace-nowrap ' + getEstadoColor(detalle.estado)">

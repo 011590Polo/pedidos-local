@@ -1,178 +1,178 @@
-<div class="min-h-screen bg-gray-50 p-6">
+<div class="min-h-screen bg-gray-50 p-2 sm:p-4 lg:p-6">
   <!-- Header -->
-  <div class="mb-8">
-    <div class="flex justify-between items-center">
+  <div class="mb-4 sm:mb-6 lg:mb-8">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">📊 Dashboard del Negocio</h1>
-        <p class="text-gray-600 mt-2">Vista general de ventas, productos y clientes</p>
+        <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">📊 Dashboard del Negocio</h1>
+        <p class="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">Vista general de ventas, productos y clientes</p>
       </div>
       <button 
         (click)="recargar()" 
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
         [disabled]="cargando">
-        <span class="text-lg">🔄</span>
+        <span class="text-base sm:text-lg">🔄</span>
         {{ cargando ? 'Cargando...' : 'Actualizar' }}
       </button>
     </div>
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="cargando" class="flex justify-center items-center py-20">
+  <div *ngIf="cargando" class="flex justify-center items-center py-10 sm:py-16 lg:py-20">
     <div class="text-center">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-      <p class="text-gray-600">Cargando datos del dashboard...</p>
+      <div class="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 border-b-2 border-blue-600 mx-auto mb-3 sm:mb-4"></div>
+      <p class="text-gray-600 text-sm sm:text-base">Cargando datos del dashboard...</p>
     </div>
   </div>
 
   <!-- Error State -->
-  <div *ngIf="error && !cargando" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+  <div *ngIf="error && !cargando" class="bg-red-100 border border-red-400 text-red-700 px-3 py-2 sm:px-4 sm:py-3 rounded mb-4 sm:mb-6 text-sm sm:text-base">
     <p>{{ error }}</p>
-    <button (click)="recargar()" class="mt-2 bg-red-600 text-white px-3 py-1 rounded text-sm">
+    <button (click)="recargar()" class="mt-2 bg-red-600 text-white px-2.5 py-1 sm:px-3 sm:py-1 rounded text-xs sm:text-sm">
       Reintentar
     </button>
   </div>
 
   <!-- Dashboard Content -->
-  <div *ngIf="dashboardData && !cargando" class="space-y-8">
+  <div *ngIf="dashboardData && !cargando" class="space-y-4 sm:space-y-6 lg:space-y-8">
     
     <!-- Métricas Principales -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
       <!-- Ingresos Totales -->
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="bg-white rounded-lg shadow p-3 sm:p-4 lg:p-6">
         <div class="flex items-center">
-          <div class="p-3 rounded-full bg-green-100 text-green-600">
-            <span class="text-2xl">💰</span>
+          <div class="p-2 sm:p-2.5 lg:p-3 rounded-full bg-green-100 text-green-600">
+            <span class="text-lg sm:text-xl lg:text-2xl">💰</span>
           </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Ingresos Totales</p>
-            <p class="text-2xl font-bold text-gray-900">{{ formatearMoneda(dashboardData.ingresos.ingresos_totales || 0) }}</p>
+          <div class="ml-2 sm:ml-3 lg:ml-4">
+            <p class="text-xs sm:text-sm font-medium text-gray-600">Ingresos Totales</p>
+            <p class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">{{ formatearMoneda(dashboardData.ingresos.ingresos_totales || 0) }}</p>
           </div>
         </div>
       </div>
 
       <!-- Pedidos Exitosos -->
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="bg-white rounded-lg shadow p-3 sm:p-4 lg:p-6">
         <div class="flex items-center">
-          <div class="p-3 rounded-full bg-blue-100 text-blue-600">
-            <span class="text-2xl">✅</span>
+          <div class="p-2 sm:p-2.5 lg:p-3 rounded-full bg-blue-100 text-blue-600">
+            <span class="text-lg sm:text-xl lg:text-2xl">✅</span>
           </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Pedidos Exitosos</p>
-            <p class="text-2xl font-bold text-gray-900">{{ dashboardData.ingresos.pedidos_exitosos || 0 }}</p>
+          <div class="ml-2 sm:ml-3 lg:ml-4">
+            <p class="text-xs sm:text-sm font-medium text-gray-600">Pedidos Exitosos</p>
+            <p class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">{{ dashboardData.ingresos.pedidos_exitosos || 0 }}</p>
           </div>
         </div>
       </div>
 
       <!-- Promedio por Pedido -->
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="bg-white rounded-lg shadow p-3 sm:p-4 lg:p-6">
         <div class="flex items-center">
-          <div class="p-3 rounded-full bg-purple-100 text-purple-600">
-            <span class="text-2xl">📈</span>
+          <div class="p-2 sm:p-2.5 lg:p-3 rounded-full bg-purple-100 text-purple-600">
+            <span class="text-lg sm:text-xl lg:text-2xl">📈</span>
           </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Promedio por Pedido</p>
-            <p class="text-2xl font-bold text-gray-900">{{ formatearMoneda(dashboardData.ingresos.promedio_pedido || 0) }}</p>
+          <div class="ml-2 sm:ml-3 lg:ml-4">
+            <p class="text-xs sm:text-sm font-medium text-gray-600">Promedio por Pedido</p>
+            <p class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">{{ formatearMoneda(dashboardData.ingresos.promedio_pedido || 0) }}</p>
           </div>
         </div>
       </div>
 
       <!-- Pedidos Cancelados -->
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="bg-white rounded-lg shadow p-3 sm:p-4 lg:p-6">
         <div class="flex items-center">
-          <div class="p-3 rounded-full bg-red-100 text-red-600">
-            <span class="text-2xl">❌</span>
+          <div class="p-2 sm:p-2.5 lg:p-3 rounded-full bg-red-100 text-red-600">
+            <span class="text-lg sm:text-xl lg:text-2xl">❌</span>
           </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Pedidos Cancelados</p>
-            <p class="text-2xl font-bold text-gray-900">{{ dashboardData.ingresos.pedidos_cancelados || 0 }}</p>
+          <div class="ml-2 sm:ml-3 lg:ml-4">
+            <p class="text-xs sm:text-sm font-medium text-gray-600">Pedidos Cancelados</p>
+            <p class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">{{ dashboardData.ingresos.pedidos_cancelados || 0 }}</p>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Estado de Pedidos -->
-    <div class="bg-white rounded-lg shadow p-6">
-      <h2 class="text-xl font-bold text-gray-900 mb-4">📋 Estado de Pedidos</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div class="bg-white rounded-lg shadow p-3 sm:p-4 lg:p-6">
+      <h2 class="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">📋 Estado de Pedidos</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
         <div *ngFor="let estado of dashboardData.estados" class="text-center">
-          <div class="p-4 rounded-lg" [ngClass]="getEstadoColor(estado.estado)">
-            <p class="font-semibold">{{ estado.estado }}</p>
-            <p class="text-2xl font-bold">{{ estado.cantidad }}</p>
-            <p class="text-sm">{{ formatearMoneda(estado.total_por_estado) }}</p>
+          <div class="p-2 sm:p-3 lg:p-4 rounded-lg" [ngClass]="getEstadoColor(estado.estado)">
+            <p class="font-semibold text-xs sm:text-sm">{{ estado.estado }}</p>
+            <p class="text-lg sm:text-xl lg:text-2xl font-bold">{{ estado.cantidad }}</p>
+            <p class="text-xs sm:text-sm">{{ formatearMoneda(estado.total_por_estado) }}</p>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Productos Más Vendidos -->
-    <div class="bg-white rounded-lg shadow p-6">
-      <h2 class="text-xl font-bold text-gray-900 mb-4">🏆 Productos Más Vendidos</h2>
+    <div class="bg-white rounded-lg shadow p-3 sm:p-4 lg:p-6">
+      <h2 class="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">🏆 Productos Más Vendidos</h2>
       <div *ngIf="dashboardData.productosMasVendidos && dashboardData.productosMasVendidos.length > 0" class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
+        <table class="min-w-full divide-y divide-gray-200 text-xs sm:text-sm">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad Vendida</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Veces Pedido</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ingresos</th>
+              <th class="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
+              <th class="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+              <th class="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cant. Vendida</th>
+              <th class="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Veces</th>
+              <th class="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ingresos</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr *ngFor="let producto of dashboardData.productosMasVendidos">
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-medium text-gray-900">{{ producto.nombre }}</div>
+              <td class="px-2 sm:px-4 lg:px-6 py-2 sm:py-4">
+                <div class="text-xs sm:text-sm font-medium text-gray-900">{{ producto.nombre }}</div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <td class="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 text-xs sm:text-sm text-gray-900">
                 {{ formatearMoneda(producto.precio) }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <td class="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 text-xs sm:text-sm text-gray-900">
                 {{ producto.total_vendido }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <td class="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 text-xs sm:text-sm text-gray-900">
                 {{ producto.veces_pedido }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+              <td class="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 text-xs sm:text-sm font-medium text-green-600">
                 {{ formatearMoneda(producto.ingresos_generados) }}
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-      <div *ngIf="!dashboardData.productosMasVendidos || dashboardData.productosMasVendidos.length === 0" class="text-center py-8 text-gray-500">
+      <div *ngIf="!dashboardData.productosMasVendidos || dashboardData.productosMasVendidos.length === 0" class="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">
         <p>No hay productos vendidos para mostrar</p>
       </div>
     </div>
 
     <!-- Clientes Más Frecuentes -->
-    <div class="bg-white rounded-lg shadow p-6">
-      <h2 class="text-xl font-bold text-gray-900 mb-4">👥 Clientes Más Frecuentes</h2>
+    <div class="bg-white rounded-lg shadow p-3 sm:p-4 lg:p-6">
+      <h2 class="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">👥 Clientes Más Frecuentes</h2>
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
+        <table class="min-w-full divide-y divide-gray-200 text-xs sm:text-sm">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Pedidos</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Gastado</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Promedio por Pedido</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Último Pedido</th>
+              <th class="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+              <th class="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pedidos</th>
+              <th class="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+              <th class="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Promedio</th>
+              <th class="px-2 sm:px-4 lg:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Último</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr *ngFor="let cliente of dashboardData.clientesMasFrecuentes">
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-medium text-gray-900">{{ cliente.cliente }}</div>
+              <td class="px-2 sm:px-4 lg:px-6 py-2 sm:py-4">
+                <div class="text-xs sm:text-sm font-medium text-gray-900">{{ cliente.cliente }}</div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <td class="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 text-xs sm:text-sm text-gray-900">
                 {{ cliente.total_pedidos }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+              <td class="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 text-xs sm:text-sm font-medium text-green-600">
                 {{ formatearMoneda(cliente.total_gastado) }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <td class="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 text-xs sm:text-sm text-gray-900 hidden sm:table-cell">
                 {{ formatearMoneda(cliente.promedio_pedido) }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td class="px-2 sm:px-4 lg:px-6 py-2 sm:py-4 text-xs sm:text-sm text-gray-500 hidden md:table-cell">
                 {{ formatearFecha(cliente.ultimo_pedido) }}
               </td>
             </tr>
@@ -182,34 +182,34 @@
     </div>
 
     <!-- Ventas de la Última Semana (7 días completos) -->
-    <div class="bg-white rounded-lg shadow p-6">
-      <h2 class="text-xl font-bold text-gray-900 mb-4">📅 Ventas de la Última Semana (7 días)</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
+    <div class="bg-white rounded-lg shadow p-3 sm:p-4 lg:p-6">
+      <h2 class="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">📅 Ventas de la Última Semana</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2 sm:gap-3 lg:gap-4">
         <div *ngFor="let venta of dashboardData.ventasUltimaSemana" 
-             class="text-center p-4 rounded-lg border transition-all duration-200 hover:shadow-lg"
+             class="text-center p-2 sm:p-3 lg:p-4 rounded-lg border transition-all duration-200 hover:shadow-lg"
              [ngClass]="{
                'bg-gradient-to-br from-green-50 to-emerald-100 border-green-200': venta.pedidos > 0,
                'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200': venta.pedidos === 0
              }">
-          <p class="font-semibold text-gray-900 mb-1">{{ venta.nombre_dia }}</p>
-          <p class="text-sm text-gray-600 mb-2">{{ formatearFecha(venta.fecha) }}</p>
+          <p class="font-semibold text-gray-900 mb-0.5 sm:mb-1 text-xs sm:text-sm">{{ venta.nombre_dia }}</p>
+          <p class="text-[10px] sm:text-xs text-gray-600 mb-1 sm:mb-2">{{ formatearFecha(venta.fecha) }}</p>
           
-          <div class="space-y-1">
-            <div class="flex items-center justify-center gap-1">
-              <span class="text-lg font-bold" [ngClass]="venta.pedidos > 0 ? 'text-blue-600' : 'text-gray-400'">
+          <div class="space-y-0.5 sm:space-y-1">
+            <div class="flex items-center justify-center gap-0.5 sm:gap-1">
+              <span class="text-sm sm:text-base lg:text-lg font-bold" [ngClass]="venta.pedidos > 0 ? 'text-blue-600' : 'text-gray-400'">
                 {{ venta.pedidos }}
               </span>
-              <span class="text-xs text-gray-500">pedidos</span>
+              <span class="text-[10px] sm:text-xs text-gray-500">ped.</span>
             </div>
             
-            <div class="text-sm font-medium" [ngClass]="venta.ventas > 0 ? 'text-green-600' : 'text-gray-400'">
+            <div class="text-xs sm:text-sm font-medium" [ngClass]="venta.ventas > 0 ? 'text-green-600' : 'text-gray-400'">
               {{ formatearMoneda(venta.ventas) }}
             </div>
             
-            <div *ngIf="venta.pedidos > 0" class="text-xs text-gray-500">
-              Promedio: {{ formatearMoneda(venta.promedio_venta) }}
+            <div *ngIf="venta.pedidos > 0" class="text-[10px] sm:text-xs text-gray-500">
+              Prom: {{ formatearMoneda(venta.promedio_venta) }}
             </div>
-            <div *ngIf="venta.pedidos === 0" class="text-xs text-gray-400">
+            <div *ngIf="venta.pedidos === 0" class="text-[10px] sm:text-xs text-gray-400">
               Sin ventas
             </div>
           </div>
@@ -217,50 +217,50 @@
       </div>
       
       <!-- Resumen de la semana -->
-      <div class="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-        <h3 class="font-semibold text-gray-900 mb-2">📊 Resumen de la Semana</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+      <div class="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+        <h3 class="font-semibold text-gray-900 mb-2 text-sm sm:text-base">📊 Resumen de la Semana</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-center">
           <div>
-            <p class="text-2xl font-bold text-blue-600">
+            <p class="text-xl sm:text-2xl font-bold text-blue-600">
               {{ getTotalPedidosSemana() }}
             </p>
-            <p class="text-sm text-gray-600">Total Pedidos</p>
+            <p class="text-xs sm:text-sm text-gray-600">Total Pedidos</p>
           </div>
           <div>
-            <p class="text-2xl font-bold text-green-600">
+            <p class="text-xl sm:text-2xl font-bold text-green-600">
               {{ formatearMoneda(getTotalVentasSemana()) }}
             </p>
-            <p class="text-sm text-gray-600">Total Ventas</p>
+            <p class="text-xs sm:text-sm text-gray-600">Total Ventas</p>
           </div>
           <div>
-            <p class="text-2xl font-bold text-purple-600">
+            <p class="text-xl sm:text-2xl font-bold text-purple-600">
               {{ formatearMoneda(getPromedioDiarioSemana()) }}
             </p>
-            <p class="text-sm text-gray-600">Promedio Diario</p>
+            <p class="text-xs sm:text-sm text-gray-600">Promedio Diario</p>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Filtro de Pedidos por Cliente -->
-    <div class="bg-white rounded-lg shadow p-6">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold text-gray-900">🔍 Filtro de Pedidos por Cliente</h2>
+    <div class="bg-white rounded-lg shadow p-3 sm:p-4 lg:p-6">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-3 sm:mb-4">
+        <h2 class="text-lg sm:text-xl font-bold text-gray-900">🔍 Filtro de Pedidos por Cliente</h2>
         <button 
           (click)="toggleFiltroPedidos()" 
-          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-          <span class="text-lg">{{ mostrarFiltroPedidos ? '👁️' : '🔍' }}</span>
-          {{ mostrarFiltroPedidos ? 'Ocultar Filtro' : 'Mostrar Filtro' }}
+          class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base">
+          <span class="text-base sm:text-lg">{{ mostrarFiltroPedidos ? '👁️' : '🔍' }}</span>
+          {{ mostrarFiltroPedidos ? 'Ocultar' : 'Mostrar' }}
         </button>
       </div>
 
       <!-- Formulario de Filtros -->
-      <div *ngIf="mostrarFiltroPedidos" class="bg-gray-50 p-4 rounded-lg mb-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div *ngIf="mostrarFiltroPedidos" class="bg-gray-50 p-3 sm:p-4 rounded-lg mb-3 sm:mb-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           <!-- Cliente -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-            <select [(ngModel)]="filtros.cliente" class="w-full border border-gray-300 rounded-md px-3 py-2">
+            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Cliente</label>
+            <select [(ngModel)]="filtros.cliente" class="w-full border border-gray-300 rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-sm">
               <option value="">Todos los clientes</option>
               <option *ngFor="let cliente of clientesUnicos" [value]="cliente">{{ cliente }}</option>
             </select>
@@ -268,8 +268,8 @@
 
           <!-- Estado -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-            <select [(ngModel)]="filtros.estado" class="w-full border border-gray-300 rounded-md px-3 py-2">
+            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Estado</label>
+            <select [(ngModel)]="filtros.estado" class="w-full border border-gray-300 rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-sm">
               <option value="">Todos los estados</option>
               <option *ngFor="let estado of estados" [value]="estado">{{ estado }}</option>
             </select>
@@ -277,90 +277,90 @@
 
           <!-- Fecha Desde -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Desde</label>
+            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Fecha Desde</label>
             <input 
               type="date" 
               [(ngModel)]="filtros.fechaDesde" 
-              class="w-full border border-gray-300 rounded-md px-3 py-2">
+              class="w-full border border-gray-300 rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-sm">
           </div>
 
           <!-- Fecha Hasta -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Hasta</label>
+            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Fecha Hasta</label>
             <input 
               type="date" 
               [(ngModel)]="filtros.fechaHasta" 
-              class="w-full border border-gray-300 rounded-md px-3 py-2">
+              class="w-full border border-gray-300 rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-sm">
           </div>
 
           <!-- Total Mínimo -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Total Mínimo</label>
+            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Total Mínimo</label>
             <input 
               type="number" 
               [(ngModel)]="filtros.totalMin" 
               placeholder="0"
-              class="w-full border border-gray-300 rounded-md px-3 py-2">
+              class="w-full border border-gray-300 rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-sm">
           </div>
 
           <!-- Total Máximo -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Total Máximo</label>
+            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Total Máximo</label>
             <input 
               type="number" 
               [(ngModel)]="filtros.totalMax" 
               placeholder="1000000"
-              class="w-full border border-gray-300 rounded-md px-3 py-2">
+              class="w-full border border-gray-300 rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-sm">
           </div>
         </div>
 
         <!-- Botones de Acción -->
-        <div class="flex gap-2 mt-4">
+        <div class="flex flex-col sm:flex-row gap-2 mt-3 sm:mt-4">
           <button 
             (click)="buscarPedidos()" 
             [disabled]="cargando"
-            class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-            <span class="text-lg">🔍</span>
+            class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base">
+            <span class="text-base sm:text-lg">🔍</span>
             {{ cargando ? 'Buscando...' : 'Buscar Pedidos' }}
           </button>
           <button 
             (click)="limpiarFiltros()" 
-            class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-            <span class="text-lg">🗑️</span>
+            class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base">
+            <span class="text-base sm:text-lg">🗑️</span>
             Limpiar Filtros
           </button>
         </div>
       </div>
 
       <!-- Resultados de Pedidos -->
-      <div *ngIf="pedidosFiltrados.length > 0" class="mt-4">
-        <h3 class="text-lg font-semibold text-gray-900 mb-3">Resultados ({{ pedidosFiltrados.length }} pedidos)</h3>
-        <div class="space-y-4">
-          <div *ngFor="let pedido of pedidosFiltrados" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-            <div class="flex justify-between items-start mb-2">
+      <div *ngIf="pedidosFiltrados.length > 0" class="mt-3 sm:mt-4">
+        <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">Resultados ({{ pedidosFiltrados.length }} pedidos)</h3>
+        <div class="space-y-3 sm:space-y-4">
+          <div *ngFor="let pedido of pedidosFiltrados" class="border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 mb-2">
               <div>
-                <h4 class="font-semibold text-gray-900">{{ pedido.cliente }}</h4>
-                <p class="text-sm text-gray-600">Mesa: {{ pedido.mesa || 'No especificada' }}</p>
-                <p class="text-sm text-gray-600">Código: {{ pedido.codigo_publico }}</p>
+                <h4 class="font-semibold text-gray-900 text-sm sm:text-base">{{ pedido.cliente }}</h4>
+                <p class="text-xs sm:text-sm text-gray-600">Mesa: {{ pedido.mesa || 'No especificada' }}</p>
+                <p class="text-xs sm:text-sm text-gray-600">Código: {{ pedido.codigo_publico }}</p>
               </div>
-              <div class="text-right">
-                <span class="px-2 py-1 rounded text-xs font-medium" [ngClass]="getEstadoColor(pedido.estado)">
+              <div class="text-left sm:text-right">
+                <span class="px-2 py-0.5 sm:py-1 rounded text-xs font-medium" [ngClass]="getEstadoColor(pedido.estado)">
                   {{ pedido.estado }}
                 </span>
-                <p class="text-lg font-bold text-green-600 mt-1">{{ formatearMoneda(pedido.total) }}</p>
+                <p class="text-base sm:text-lg font-bold text-green-600 mt-1">{{ formatearMoneda(pedido.total) }}</p>
               </div>
             </div>
             
-            <div class="text-sm text-gray-600 mb-2">
+            <div class="text-xs sm:text-sm text-gray-600 mb-2">
               <p><strong>Fecha:</strong> {{ formatearFechaCompleta(pedido.fecha) }}</p>
             </div>
 
             <!-- Detalles de Productos -->
-            <div class="bg-gray-50 p-3 rounded">
-              <p class="font-medium text-gray-900 mb-2">Productos:</p>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div class="bg-gray-50 p-2 sm:p-3 rounded">
+              <p class="font-medium text-gray-900 mb-1.5 sm:mb-2 text-xs sm:text-sm">Productos:</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
                 <div *ngFor="let producto of parsearProductos(pedido.productos_detalle); let i = index" 
-                     class="flex justify-between items-center text-sm">
+                     class="flex justify-between items-center text-xs sm:text-sm">
                   <span>{{ producto }}</span>
                   <span class="font-medium text-green-600">
                     {{ formatearMoneda(parsearSubtotales(pedido.subtotales)[i] || 0) }}
@@ -372,28 +372,28 @@
         </div>
       </div>
 
-      <div *ngIf="mostrarFiltroPedidos && pedidosFiltrados.length === 0 && !cargando" class="text-center py-8 text-gray-500">
+      <div *ngIf="mostrarFiltroPedidos && pedidosFiltrados.length === 0 && !cargando" class="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">
         <p>No hay pedidos que coincidan con los filtros seleccionados</p>
       </div>
     </div>
 
     <!-- Ventas del Día -->
-    <div class="bg-white rounded-lg shadow p-6">
-      <h2 class="text-xl font-bold text-gray-900 mb-4">📅 Ventas del Día</h2>
+    <div class="bg-white rounded-lg shadow p-3 sm:p-4 lg:p-6">
+      <h2 class="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">📅 Ventas del Día</h2>
       <div *ngIf="dashboardData.ventasDia.length > 0; else noVentasDia">
-        <div *ngFor="let venta of dashboardData.ventasDia" class="flex justify-between items-center p-4 bg-gray-50 rounded-lg mb-2">
+        <div *ngFor="let venta of dashboardData.ventasDia" class="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 sm:p-4 bg-gray-50 rounded-lg mb-2">
           <div>
-            <p class="font-semibold text-gray-900">{{ formatearFecha(venta.fecha) }}</p>
-            <p class="text-sm text-gray-600">{{ venta.total_pedidos }} pedidos</p>
+            <p class="font-semibold text-gray-900 text-sm sm:text-base">{{ formatearFecha(venta.fecha) }}</p>
+            <p class="text-xs sm:text-sm text-gray-600">{{ venta.total_pedidos }} pedidos</p>
           </div>
-          <div class="text-right">
-            <p class="text-lg font-bold text-green-600">{{ formatearMoneda(venta.total_ventas) }}</p>
-            <p class="text-sm text-gray-600">Promedio: {{ formatearMoneda(venta.promedio_venta) }}</p>
+          <div class="text-left sm:text-right mt-2 sm:mt-0">
+            <p class="text-base sm:text-lg font-bold text-green-600">{{ formatearMoneda(venta.total_ventas) }}</p>
+            <p class="text-xs sm:text-sm text-gray-600">Promedio: {{ formatearMoneda(venta.promedio_venta) }}</p>
           </div>
         </div>
       </div>
       <ng-template #noVentasDia>
-        <p class="text-gray-500 text-center py-8">No hay ventas registradas para hoy</p>
+        <p class="text-gray-500 text-center py-6 sm:py-8 text-sm sm:text-base">No hay ventas registradas para hoy</p>
       </ng-template>
     </div>
 
