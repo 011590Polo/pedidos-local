@@ -4,13 +4,19 @@ const {
   getPedidos,
   getPedidoById,
   getPedidoByCodigo,
-  createPedido,
+  createPedidoConReutilizacion,
   updatePedido,
-  deletePedido
+  deletePedido,
+  getDetallesPedido,
+  updateDetalleEstado,
+  getPedidosAgrupados,
+  getPedidosPorGrupo
 } = require('../database');
 
 // GET /pedidos - Listar todos los pedidos
 router.get('/', (req, res) => {
+  const includeDetalles = req.query.include === 'detalles';
+  
   getPedidos((err, pedidos) => {
     if (err) {
       console.error('Error al obtener pedidos:', err);
@@ -20,44 +26,85 @@ router.get('/', (req, res) => {
       });
     }
     
+    if (includeDetalles && pedidos && pedidos.length > 0) {
+      // Obtener detalles para cada pedido
+      let pedidosConDetalles = [];
+      let completed = 0;
+      
+      pedidos.forEach((pedido, index) => {
+        getDetallesPedido(pedido.id, (err2, detalles) => {
+          if (!err2 && detalles) {
+            pedido.detalles = detalles;
+          } else {
+            pedido.detalles = [];
+          }
+          
+          pedidosConDetalles[index] = pedido;
+          completed++;
+          
+          if (completed === pedidos.length) {
+            res.json({
+              success: true,
+              data: pedidosConDetalles,
+              count: pedidosConDetalles.length
+            });
+          }
+        });
+      });
+    } else {
+      res.json({
+        success: true,
+        data: pedidos,
+        count: pedidos.length
+      });
+    }
+  });
+});
+
+// IMPORTANTE: Las rutas específicas deben ir ANTES de las rutas con parámetros genéricos
+// GET /pedidos/agrupados - Obtener pedidos agrupados por código público
+router.get('/agrupados', (req, res) => {
+  getPedidosAgrupados((err, grupos) => {
+    if (err) {
+      console.error('Error al obtener pedidos agrupados:', err);
+      return res.status(500).json({
+        error: 'Error interno del servidor',
+        message: 'No se pudieron obtener los pedidos agrupados'
+      });
+    }
+    
     res.json({
       success: true,
-      data: pedidos,
-      count: pedidos.length
+      data: grupos || [],
+      count: grupos ? grupos.length : 0
     });
   });
 });
 
-// GET /pedidos/:id - Obtener un pedido específico
-router.get('/:id', (req, res) => {
-  const { id } = req.params;
+// GET /pedidos/grupo/:codigo - Obtener todos los pedidos de un grupo por código público
+router.get('/grupo/:codigo', (req, res) => {
+  const { codigo } = req.params;
   
-  if (!id || isNaN(id)) {
+  if (!codigo || codigo.trim().length === 0) {
     return res.status(400).json({
-      error: 'ID inválido',
-      message: 'El ID debe ser un número válido'
+      error: 'Código inválido',
+      message: 'El código público es requerido'
     });
   }
   
-  getPedidoById(id, (err, pedido) => {
+  getPedidosPorGrupo(codigo, (err, pedidos) => {
     if (err) {
-      console.error('Error al obtener pedido:', err);
+      console.error('Error al obtener pedidos del grupo:', err);
       return res.status(500).json({
         error: 'Error interno del servidor',
-        message: 'No se pudo obtener el pedido'
-      });
-    }
-    
-    if (!pedido) {
-      return res.status(404).json({
-        error: 'Pedido no encontrado',
-        message: 'El pedido solicitado no existe'
+        message: 'No se pudieron obtener los pedidos del grupo'
       });
     }
     
     res.json({
       success: true,
-      data: pedido
+      data: pedidos || [],
+      count: pedidos ? pedidos.length : 0
     });
   });
 });
@@ -109,6 +156,149 @@ router.get('/seguimiento/:codigo', (req, res) => {
   });
 });
 
+// GET /pedidos/:id/detalles - Obtener detalles de un pedido con estados
+router.get('/:id/detalles', (req, res) => {
+  const { id } = req.params;
+  
+  if (!id || isNaN(id)) {
+    return res.status(400).json({
+      error: 'ID inválido',
+      message: 'El ID debe ser un número válido'
+    });
+  }
+  
+  getDetallesPedido(id, (err, detalles) => {
+    if (err) {
+      console.error('Error al obtener detalles:', err);
+      return res.status(500).json({
+        error: 'Error interno del servidor',
+        message: 'No se pudieron obtener los detalles del pedido'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: detalles || [],
+      count: detalles ? detalles.length : 0
+    });
+  });
+});
+
+// GET /pedidos/:id - Obtener un pedido específico (DEBE IR AL FINAL)
+router.get('/:id', (req, res) => {
+  const { id } = req.params;
+  
+  if (!id || isNaN(id)) {
+    return res.status(400).json({
+      error: 'ID inválido',
+      message: 'El ID debe ser un número válido'
+    });
+  }
+  
+  getPedidoById(id, (err, pedido) => {
+    if (err) {
+      console.error('Error al obtener pedido:', err);
+      return res.status(500).json({
+        error: 'Error interno del servidor',
+        message: 'No se pudo obtener el pedido'
+      });
+    }
+    
+    if (!pedido) {
+      return res.status(404).json({
+        error: 'Pedido no encontrado',
+        message: 'El pedido solicitado no existe'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: pedido
+    });
+  });
+});
+
+// PUT /pedidos/:id/detalle/:detalleId - Actualizar estado de un detalle específico
+router.put('/:id/detalle/:detalleId', (req, res) => {
+  const { id, detalleId } = req.params;
+  const { estado } = req.body;
+  
+  if (!id || isNaN(id) || !detalleId || isNaN(detalleId)) {
+    return res.status(400).json({
+      error: 'ID inválido',
+      message: 'Los IDs deben ser números válidos'
+    });
+  }
+  
+  if (!estado || !['Pendiente', 'En preparación', 'Listo', 'Entregado', 'Cancelado'].includes(estado)) {
+    return res.status(400).json({
+      error: 'Estado inválido',
+      message: 'El estado debe ser: Pendiente, En preparación, Listo, Entregado o Cancelado'
+    });
+  }
+  
+  updateDetalleEstado(detalleId, estado, (err, changes) => {
+    if (err) {
+      console.error('Error al actualizar detalle:', err);
+      return res.status(500).json({
+        error: 'Error interno del servidor',
+        message: 'No se pudo actualizar el estado del detalle'
+      });
+    }
+    
+    if (changes === 0) {
+      return res.status(404).json({
+        error: 'Detalle no encontrado',
+        message: 'El detalle solicitado no existe'
+      });
+    }
+    
+    // Obtener el detalle actualizado y el pedido completo para emitir evento
+    getDetallesPedido(id, (err2, detalles) => {
+      if (err2) {
+        console.error('Error al obtener detalles actualizados:', err2);
+      }
+      
+      getPedidoById(id, (err3, pedido) => {
+        if (err3) {
+          console.error('Error al obtener pedido:', err3);
+        }
+        
+        res.json({
+          success: true,
+          message: 'Estado del detalle actualizado exitosamente',
+          data: {
+            detalleId: parseInt(detalleId),
+            nuevoEstado: estado,
+            detalles: detalles || []
+          }
+        });
+        
+        // Emitir evento de actualización de detalle
+        try {
+          const io = req.app.get('io');
+          if (io && pedido && pedido.codigo_publico) {
+            const payload = {
+              id_pedido: parseInt(id),
+              id_detalle: parseInt(detalleId),
+              nuevo_estado: estado,
+              codigo_publico: pedido.codigo_publico,
+              detalles: detalles || []
+            };
+            // Emitir a la sala de seguimiento
+            const room = `seguimiento:${pedido.codigo_publico}`;
+            io.to(room).emit('detallePedidoActualizado', payload);
+            // Emitir globalmente para actualizar todas las vistas
+            io.emit('detallePedidoActualizado', payload);
+          }
+        } catch (emitErr) {
+          console.error('Error al emitir evento detallePedidoActualizado:', emitErr);
+        }
+      });
+    });
+  });
+});
+
 // POST /pedidos - Crear un nuevo pedido
 router.post('/', (req, res) => {
   const { cliente, mesa, productos } = req.body;
@@ -124,6 +314,7 @@ router.post('/', (req, res) => {
   // Validar estructura de productos
   for (let i = 0; i < productos.length; i++) {
     const producto = productos[i];
+    console.log(producto);
     if (!producto.id || !producto.cantidad || !producto.precio) {
       return res.status(400).json({
         error: 'Datos de producto inválidos',
@@ -140,8 +331,10 @@ router.post('/', (req, res) => {
   }
   
   // Calcular total
+  debugger;
   let total = 0;
   const productosConSubtotal = productos.map(producto => {
+    console.log(producto);
     const subtotal = producto.cantidad * producto.precio;
     total += subtotal;
     return {
@@ -155,10 +348,10 @@ router.post('/', (req, res) => {
     cliente: cliente ? cliente.trim() : 'Cliente no especificado',
     mesa: mesa ? mesa.trim() : null,
     total: parseFloat(total.toFixed(2)),
-    productos: productosConSubtotal
+    productos: productosConSubtotal,
+    concat_productos_nombres: productosConSubtotal.map(producto => producto.nombre).join(', ')
   };
-  
-  createPedido(pedido, (err, resultado) => {
+  createPedidoConReutilizacion(pedido, (err, resultado) => {
     if (err) {
       console.error('Error al crear pedido:', err);
       return res.status(500).json({
@@ -166,29 +359,53 @@ router.post('/', (req, res) => {
         message: 'No se pudo crear el pedido'
       });
     }
-    const nuevoPedido = {
+    
+    // Construir respuesta base y luego complementar con agregados desde la BD
+    const basePedido = {
       id: resultado.id,
       codigo_publico: resultado.codigo_publico,
       cliente: pedido.cliente,
       mesa: pedido.mesa,
-      total: pedido.total,
-      productos: pedido.productos
+      total: resultado.total_actualizado || pedido.total
     };
 
-    // Responder al cliente HTTP
-    res.status(201).json({
-      success: true,
-      message: 'Pedido creado exitosamente',
-      data: nuevoPedido
-    });
-
-    // Emitir evento por Socket.IO para notificar a clientes conectados
-    try {
-      const io = req.app.get('io');
-      if (io) io.emit('pedidoCreado', nuevoPedido);
-    } catch (emitErr) {
-      console.error('Error al emitir evento pedidoCreado:', emitErr);
+    // Determinar el mensaje según si se reutilizó el código o no
+    let mensaje = 'Pedido creado exitosamente';
+    if (resultado.reutilizado) {
+      mensaje = `Productos agregados al pedido existente con código público ${resultado.codigo_publico}`;
+      basePedido.reutilizado = true;
+      basePedido.pedido_original_id = resultado.pedido_original_id;
+      basePedido.total_actualizado = resultado.total_actualizado;
     }
+
+    // Consultar el pedido con productos agregados (cadena concatenada como en getPedidos)
+    getPedidoByCodigo(basePedido.codigo_publico, (aggErr, pedidoAgg) => {
+      const respuesta = {
+        ...basePedido,
+        // Asegurar consistencia de campos esperados en frontend
+        estado: (pedidoAgg && pedidoAgg.estado) ? pedidoAgg.estado : 'Pendiente',
+        fecha: (pedidoAgg && pedidoAgg.fecha) ? pedidoAgg.fecha : new Date().toISOString(),
+        cliente: (pedidoAgg && pedidoAgg.cliente) ? pedidoAgg.cliente : basePedido.cliente,
+        mesa: (pedidoAgg && pedidoAgg.mesa) ? pedidoAgg.mesa : basePedido.mesa,
+        // Si la consulta falla o no trae productos, caer al formato original
+        productos: (pedidoAgg && pedidoAgg.productos) ? pedidoAgg.productos : pedido.productos
+      };
+
+      // Responder al cliente HTTP con datos consistentes
+      res.status(201).json({
+        success: true,
+        message: mensaje,
+        data: respuesta
+      });
+
+      // Emitir evento por Socket.IO para notificar a clientes conectados con los productos concatenados
+      try {
+        const io = req.app.get('io');
+        if (io) io.emit('pedidoCreado', respuesta);
+      } catch (emitErr) {
+        console.error('Error al emitir evento pedidoCreado:', emitErr);
+      }
+    });
   });
 });
 
@@ -277,7 +494,11 @@ router.put('/:id', (req, res) => {
             cliente: pedidoActualizado.cliente,
             mesa: pedidoActualizado.mesa
           };
-          if (io) io.to(room).emit('pedidoActualizado', payload);
+          if (io) {
+            io.to(room).emit('pedidoActualizado', payload);
+            // Emitir también de forma global para que otras vistas (listas/dashboard) actualicen
+            io.emit('pedidoActualizado', payload);
+          }
         }
       } catch (emitErr) {
         console.error('Error al emitir evento pedidoActualizado:', emitErr);

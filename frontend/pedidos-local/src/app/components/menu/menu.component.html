@@ -1,0 +1,128 @@
+<div class="min-h-screen menu-wooden-bg p-3 sm:p-4 md:p-6">
+  <div class="max-w-7xl mx-auto">
+    <!-- Título Principal del Menú -->
+    <div class="text-center mb-6 sm:mb-8">
+      <h1 class="menu-main-title">MENÚ</h1>
+      <p class="menu-subtitle">El Barril & Brasa Bar</p>
+    </div>
+
+    <!-- Filtros - Estilo oscuro -->
+    <div class="bg-black bg-opacity-40 rounded-lg p-3 sm:p-4 mb-6 sm:mb-8 backdrop-blur-sm border border-amber-900 border-opacity-30">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+        <select [(ngModel)]="categoriaFiltro" class="menu-filter-input">
+          <option value="">Todas las categorías</option>
+          <option *ngFor="let c of categorias" [value]="c">{{ c }}</option>
+        </select>
+        <input [(ngModel)]="busqueda" type="text" placeholder="Buscar producto..." class="menu-filter-input" />
+        <button (click)="cargarProductos()" class="menu-filter-button">
+          🔄 Refrescar
+        </button>
+      </div>
+    </div>
+
+    <div class="menu-content-container">
+      <div *ngIf="cargando" class="text-center py-6 sm:py-8">
+        <div class="inline-block animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-amber-600 border-t-transparent"></div>
+        <p class="mt-2 text-xs sm:text-sm text-amber-300">Cargando menú...</p>
+      </div>
+
+      <div *ngIf="!cargando && filtrar().length === 0" class="text-center py-6 sm:py-10 text-amber-200 text-sm sm:text-base">
+        No hay productos para mostrar
+      </div>
+
+      <div *ngIf="!cargando && filtrar().length > 0" class="space-y-5 sm:space-y-8">
+        <div *ngFor="let grupo of categoriasAgrupadas()">
+          <!-- Etiqueta de categoría estilo menú -->
+          <div class="menu-category-label mb-4 sm:mb-6">
+            <span>{{ grupo.categoria }}</span>
+          </div>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div *ngFor="let p of grupo.productos" class="menu-item-card group">
+              <!-- Imagen pequeña con botón ojito -->
+              <div *ngIf="p.imagen" class="menu-item-image-container">
+                <div class="relative inline-block">
+                  <img [src]="getImagenUrl(p.imagen)" alt="{{ p.nombre }}" class="menu-item-image" />
+                  <button
+                    (mousedown)="onPressStart(p.imagen)"
+                    (touchstart)="onPressStart(p.imagen)"
+                    class="menu-image-overlay"
+                    type="button">
+                    <div class="menu-eye-icon">
+                      <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                      </svg>
+                    </div>
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Placeholder cuando no hay imagen -->
+              <div *ngIf="!p.imagen" class="menu-item-image-container">
+                <div class="menu-item-placeholder">
+                  <span class="text-2xl">🍽️</span>
+                </div>
+              </div>
+
+              <!-- Contenido del producto -->
+              <div class="menu-item-content">
+                <!-- Nombre del producto -->
+                <h3 class="menu-item-name">
+                  {{ p.nombre }}
+                </h3>
+
+                <!-- Descripción -->
+                <p class="menu-item-description" *ngIf="p.descripcion">
+                  {{ p.descripcion }}
+                </p>
+
+                <!-- Precio estilo menú -->
+                <div class="menu-item-price">
+                  <span class="menu-price-value">$ {{ p.precio | number:'1.2-2' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Imagen Ampliada -->
+<div *ngIf="mostrarImagenModal" 
+     class="modal-backdrop fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4"
+     (click)="ocultarImagen()">
+  <div class="modal-content rounded-lg max-w-4xl w-full max-h-[95vh] overflow-hidden"
+       (click)="$event.stopPropagation()">
+    <!-- Header del Modal -->
+    <div class="bg-black bg-opacity-60 border-b border-amber-900 border-opacity-30 text-white p-3 sm:p-4 flex justify-between items-center backdrop-blur-sm">
+      <h3 class="text-base sm:text-lg font-semibold text-amber-300">Imagen del Producto</h3>
+      <button 
+        (click)="ocultarImagen()"
+        class="text-amber-300 hover:text-amber-200 transition-colors text-2xl sm:text-3xl font-bold leading-none p-1 rounded hover:bg-amber-900 hover:bg-opacity-30 touch-manipulation"
+        aria-label="Cerrar modal">
+        ×
+      </button>
+    </div>
+    
+    <!-- Imagen Ampliada -->
+    <div class="p-4 sm:p-6 flex items-center justify-center bg-black bg-opacity-40 min-h-[200px] sm:min-h-[400px]">
+      <img [src]="imagenSeleccionadaUrl" 
+           alt="Imagen ampliada" 
+           class="max-w-full max-h-[70vh] object-contain rounded-lg" />
+    </div>
+    
+    <!-- Footer del Modal -->
+    <div class="bg-black bg-opacity-60 border-t border-amber-900 border-opacity-30 p-3 sm:p-4 flex justify-center backdrop-blur-sm">
+      <button 
+        (click)="ocultarImagen()"
+        class="bg-amber-900 hover:bg-amber-800 text-white py-2 px-6 rounded-lg text-sm sm:text-base font-medium transition-colors touch-manipulation border border-amber-700">
+        Cerrar
+      </button>
+    </div>
+  </div>
+</div>
+
+

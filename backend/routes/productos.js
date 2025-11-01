@@ -8,6 +8,38 @@ const {
   deleteProducto
 } = require('../database');
 
+// Soporte de subida de archivos (imágenes)
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+
+const uploadsRoot = path.join(__dirname, '..', 'uploads');
+const productsUploads = path.join(uploadsRoot, 'products');
+
+// Asegurar carpetas de subida
+if (!fs.existsSync(uploadsRoot)) fs.mkdirSync(uploadsRoot);
+if (!fs.existsSync(productsUploads)) fs.mkdirSync(productsUploads);
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, productsUploads);
+  },
+  filename: function (req, file, cb) {
+    const safeOriginal = (file.originalname || 'image').replace(/[^a-zA-Z0-9_.-]/g, '_');
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, unique + '-' + safeOriginal);
+  }
+});
+
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) return cb(new Error('Solo imágenes permitidas'));
+    cb(null, true);
+  },
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
+
 // GET /productos - Listar todos los productos
 router.get('/', (req, res) => {
   getProductos((err, productos) => {
@@ -62,18 +94,20 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /productos - Crear un nuevo producto
-router.post('/', (req, res) => {
-  const { nombre, precio, categoria, imagen, descripcion } = req.body;
+router.post('/', upload.single('imagen'), (req, res) => {
+  const { nombre, precio, categoria, descripcion } = req.body;
+  const imagenPath = req.file ? `/uploads/products/${req.file.filename}` : (req.body.imagen || null);
   
   // Validaciones
-  if (!nombre || !precio) {
+  const precioNum = parseFloat(precio);
+  if (!nombre || precio === undefined || precio === null || precio === '') {
     return res.status(400).json({
       error: 'Datos requeridos faltantes',
       message: 'El nombre y precio son obligatorios'
     });
   }
   
-  if (typeof precio !== 'number' || precio <= 0) {
+  if (Number.isNaN(precioNum) || precioNum <= 0) {
     return res.status(400).json({
       error: 'Precio inválido',
       message: 'El precio debe ser un número mayor a 0'
@@ -82,9 +116,9 @@ router.post('/', (req, res) => {
   
   const producto = {
     nombre: nombre.trim(),
-    precio: parseFloat(precio),
+    precio: precioNum,
     categoria: categoria ? categoria.trim() : null,
-    imagen: imagen ? imagen.trim() : null,
+    imagen: imagenPath,
     descripcion: descripcion ? descripcion.trim() : null
   };
   
@@ -119,9 +153,10 @@ router.post('/', (req, res) => {
 });
 
 // PUT /productos/:id - Actualizar un producto
-router.put('/:id', (req, res) => {
+router.put('/:id', upload.single('imagen'), (req, res) => {
   const { id } = req.params;
-  const { nombre, precio, categoria, imagen, descripcion } = req.body;
+  const { nombre, precio, categoria, descripcion } = req.body;
+  const imagenPath = req.file ? `/uploads/products/${req.file.filename}` : (req.body.imagen || undefined);
   
   if (!id || isNaN(id)) {
     return res.status(400).json({
@@ -131,18 +166,21 @@ router.put('/:id', (req, res) => {
   }
   
   // Validaciones
-  if (precio !== undefined && (typeof precio !== 'number' || precio <= 0)) {
-    return res.status(400).json({
-      error: 'Precio inválido',
-      message: 'El precio debe ser un número mayor a 0'
-    });
+  if (precio !== undefined) {
+    const precioNum = parseFloat(precio);
+    if (Number.isNaN(precioNum) || precioNum <= 0) {
+      return res.status(400).json({
+        error: 'Precio inválido',
+        message: 'El precio debe ser un número mayor a 0'
+      });
+    }
   }
   
   const producto = {};
   if (nombre !== undefined) producto.nombre = nombre.trim();
   if (precio !== undefined) producto.precio = parseFloat(precio);
   if (categoria !== undefined) producto.categoria = categoria ? categoria.trim() : null;
-  if (imagen !== undefined) producto.imagen = imagen ? imagen.trim() : null;
+  if (imagenPath !== undefined) producto.imagen = imagenPath ? imagenPath.trim() : null;
   if (descripcion !== undefined) producto.descripcion = descripcion ? descripcion.trim() : null;
   
   if (Object.keys(producto).length === 0) {
