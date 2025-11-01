@@ -25,8 +25,10 @@
 
 **PedidosLocal** es un sistema de gestión de pedidos diseñado para restaurantes, cafeterías o negocios locales que necesitan gestionar pedidos de forma eficiente con comunicación en tiempo real. El sistema permite:
 
-- ✅ Gestión completa de productos
-- ✅ Creación y seguimiento de pedidos
+- ✅ Gestión completa de productos con sistema de categorías
+- ✅ Subida de imágenes locales para productos
+- ✅ Menú público organizado por categorías con diseño elegante
+- ✅ Creación y seguimiento de pedidos con ordenamiento inteligente
 - ✅ Dashboard con analytics y estadísticas
 - ✅ Actualizaciones en tiempo real mediante Socket.IO
 - ✅ Base de datos local con SQLite
@@ -66,6 +68,7 @@
 - **Express.js** (v4.18+): Framework web minimalista
 - **SQLite3** (v5.1+): Base de datos relacional embebida
 - **Socket.IO** (v4.8+): Biblioteca para comunicación en tiempo real
+- **Multer** (v1.4+): Middleware para manejo de archivos multipart/form-data (subida de imágenes)
 - **CORS**: Middleware para manejo de políticas de origen cruzado
 
 ### 3.2 Frontend
@@ -90,7 +93,10 @@ pedidos-local-origin/
 │   ├── routes/                   # Rutas de la API
 │   │   ├── pedidos.js           # Endpoints de pedidos
 │   │   ├── productos.js         # Endpoints de productos
+│   │   ├── categorias.js        # Endpoints de categorías
 │   │   └── analytics.js         # Endpoints de analytics
+│   ├── uploads/                  # Archivos subidos
+│   │   └── products/            # Imágenes de productos
 │   ├── database.js              # Conexión y lógica de BD
 │   └── server.js                # Servidor principal
 │
@@ -101,10 +107,11 @@ pedidos-local-origin/
 │       │   │   ├── components/  # Componentes Angular
 │       │   │   │   ├── pedidos/
 │       │   │   │   ├── productos/
+│       │   │   │   ├── menu/    # Vista de menú público
 │       │   │   │   ├── seguimiento/
 │       │   │   │   └── dashboard/
-│       │   │   ├── services/    # Servicios (HTTP, Socket, Analytics)
-│       │   │   ├── models/      # Interfaces TypeScript
+│       │   │   ├── services/    # Servicios (HTTP, Socket, Analytics, Categoria)
+│       │   │   ├── models/      # Interfaces TypeScript (Producto, Pedido, Categoria)
 │       │   │   ├── app.routes.ts
 │       │   │   └── app.config.ts
 │       │   ├── environments/    # Configuración por ambiente
@@ -127,16 +134,27 @@ pedidos-local-origin/
 
 ```
 ┌──────────────┐         ┌──────────────┐         ┌──────────────────┐
-│  productos   │         │   pedidos    │         │ detalle_pedido   │
+│ categorias   │         │  productos   │         │   pedidos        │
 ├──────────────┤         ├──────────────┤         ├──────────────────┤
-│ id (PK)      │◄────────│ id (PK)      │◄────────│ id (PK)          │
-│ nombre       │         │ cliente      │         │ id_pedido (FK)   │
-│ precio       │         │ mesa         │         │ id_producto (FK) │
-│ categoria    │         │ estado       │         │ cantidad         │
-│ imagen       │         │ total        │         │ subtotal         │
-│ descripcion  │         │ fecha        │         └──────────────────┘
-│ activo       │         │ codigo_...   │
-└──────────────┘         └──────────────┘
+│ id (PK)      │         │ id (PK)      │         │ id (PK)          │
+│ nombre       │         │ nombre       │         │ cliente          │
+│ activo       │         │ precio       │         │ mesa             │
+└──────────────┘         │ categoria    │         │ estado           │
+                         │ imagen       │         │ total            │
+                         │ descripcion  │         │ fecha            │
+                         │ activo       │         │ codigo_publico   │
+                         └──────────────┘         └──────────────────┘
+                                                           │
+                                                           ▼
+                                                  ┌──────────────────┐
+                                                  │ detalle_pedido   │
+                                                  ├──────────────────┤
+                                                  │ id (PK)          │
+                                                  │ id_pedido (FK)   │
+                                                  │ id_producto (FK) │
+                                                  │ cantidad         │
+                                                  │ subtotal         │
+                                                  └──────────────────┘
 ```
 
 ### 5.2 Descripción de Tablas
@@ -151,6 +169,13 @@ pedidos-local-origin/
 | `imagen` | TEXT | Ruta o URL de la imagen |
 | `descripcion` | TEXT | Descripción del producto |
 | `activo` | INTEGER DEFAULT 1 | 1=activo, 0=eliminado (soft delete) |
+
+#### Tabla: `categorias`
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | INTEGER PRIMARY KEY | Identificador único auto-incremental |
+| `nombre` | TEXT UNIQUE NOT NULL | Nombre de la categoría (ej: "Hamburguesas", "Bebidas") |
+| `activo` | INTEGER DEFAULT 1 | 1=activa, 0=eliminada (soft delete) |
 
 #### Tabla: `pedidos`
 | Campo | Tipo | Descripción |
@@ -181,6 +206,8 @@ Ubicación: `backend/database.js`
 #### Funciones Principales
 - `initializeDatabase()`: Inicializa tablas si no existen
 - `getProductos(callback)`: Obtiene todos los productos activos
+- `getCategorias(callback)`: Obtiene todas las categorías activas
+- `createCategoria(nombre, callback)`: Crea una nueva categoría
 - `createPedido(pedido, callback)`: Crea un nuevo pedido
 - `createPedidoConReutilizacion(pedido, callback)`: Crea un pedido con lógica de reutilización
 - `getPedidoByCodigo(codigo, callback)`: Busca pedido por código público
@@ -225,24 +252,80 @@ Obtiene todos los productos activos.
 ```
 
 #### POST `/api/productos`
-Crea un nuevo producto.
+Crea un nuevo producto. **Acepta multipart/form-data para subir imágenes.**
+
+**Formato JSON:**
 ```json
 {
   "nombre": "Pizza Margherita",
   "precio": 15.00,
   "categoria": "Pizzas",
-  "imagen": "pizza-margherita.jpg",
   "descripcion": "Pizza con tomate y mozzarella"
 }
 ```
 
+**Formato multipart/form-data (recomendado):**
+- `nombre` (string): Nombre del producto
+- `precio` (number): Precio del producto
+- `categoria` (string, opcional): Categoría del producto
+- `descripcion` (string, opcional): Descripción del producto
+- `imagen` (File): Archivo de imagen (máximo 5MB, formatos: image/*)
+
+**Nota:** Si se envía una imagen, se guarda en `backend/uploads/products/` y la ruta `/uploads/products/<nombre-archivo>` se almacena en la base de datos.
+
 #### PUT `/api/productos/:id`
-Actualiza un producto existente.
+Actualiza un producto existente. **Acepta multipart/form-data para actualizar la imagen.**
+
+Los mismos campos que POST. Si se envía una nueva imagen, reemplaza la anterior.
 
 #### DELETE `/api/productos/:id`
 Elimina un producto (soft delete - pone activo=0).
 
-### 6.2 Endpoints de Pedidos
+### 6.2 Endpoints de Categorías
+
+#### GET `/api/categorias`
+Obtiene todas las categorías activas.
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "nombre": "Hamburguesas",
+      "activo": 1
+    },
+    {
+      "id": 2,
+      "nombre": "Bebidas",
+      "activo": 1
+    }
+  ],
+  "count": 5
+}
+```
+
+#### POST `/api/categorias`
+Crea una nueva categoría.
+```json
+{
+  "nombre": "Pastas"
+}
+```
+
+**Respuesta:**
+```json
+{
+  "success": true,
+  "message": "Categoría creada exitosamente",
+  "data": {
+    "id": 6,
+    "nombre": "Pastas",
+    "activo": 1
+  }
+}
+```
+
+### 6.3 Endpoints de Pedidos
 
 #### GET `/api/pedidos`
 Lista todos los pedidos con formato de productos.
@@ -308,7 +391,7 @@ Actualiza estado u otros datos del pedido.
 #### DELETE `/api/pedidos/:id`
 Elimina un pedido.
 
-### 6.3 Endpoints de Analytics
+### 6.4 Endpoints de Analytics
 
 #### GET `/api/analytics/dashboard`
 Obtiene un resumen completo del dashboard con todos los datos principales.
@@ -403,7 +486,34 @@ Obtiene lista de todos los clientes únicos.
 - Gráficos de ventas por período
 - Filtrar pedidos por múltiples criterios
 
+#### MenuComponent (`components/menu/`)
+**Responsabilidades:**
+- Mostrar menú público de productos organizado por categorías
+- Visualización tipo carta de restaurante con diseño elegante
+- Filtrado por categoría y búsqueda de productos
+- Vista responsive optimizada para móviles y tablets
+- Banner temático con estilo "El Barril & Brasa Bar"
+
 ### 7.2 Servicios
+
+#### ProductoService (`services/producto.service.ts`)
+```typescript
+export class ProductoService {
+  getProductos(): Observable<ProductoResponse>
+  getProducto(id: number): Observable<ProductoSingleResponse>
+  createProducto(producto: Producto, imagenFile?: File): Observable<ProductoSingleResponse>
+  updateProducto(id: number, producto: Producto, imagenFile?: File): Observable<ProductoSingleResponse>
+  deleteProducto(id: number): Observable<{success: boolean, message: string}>
+}
+```
+
+#### CategoriaService (`services/categoria.service.ts`)
+```typescript
+export class CategoriaService {
+  getCategorias(): Observable<CategoriaResponse>
+  createCategoria(nombre: string): Observable<CategoriaSingleResponse>
+}
+```
 
 #### PedidoService (`services/pedido.service.ts`)
 ```typescript
@@ -474,6 +584,15 @@ export interface Producto {
 }
 ```
 
+**Categoria:**
+```typescript
+export interface Categoria {
+  id?: number;
+  nombre: string;
+  activo?: number;
+}
+```
+
 ---
 
 ## 8. Comunicación en Tiempo Real
@@ -509,17 +628,22 @@ io.emit('pedidoCreado', {
 **⚠️ IMPORTANTE:** El campo `productos` se envía como string formateado, no como array de objetos.
 
 #### `pedidoActualizado`
-Se emite cuando se actualiza el estado de un pedido.
+Se emite cuando se actualiza el estado de un pedido. Se emite tanto a la sala de seguimiento específica como de forma global para actualizar todas las vistas (listas, dashboard, etc.).
 ```javascript
 const room = `seguimiento:${codigo}`;
-io.to(room).emit('pedidoActualizado', {
+const payload = {
   id: 42,
   codigo_publico: "ABC12",
   estado: "En preparación",
   total: 25.00,
+  fecha: "2024-01-15T10:30:00Z",
   cliente: "Juan Pérez",
   mesa: "Mesa 5"
-});
+};
+// Emitir a la sala de seguimiento
+io.to(room).emit('pedidoActualizado', payload);
+// Emitir globalmente para actualizar todas las vistas
+io.emit('pedidoActualizado', payload);
 ```
 
 ### 8.2 Socket.IO - Eventos del Cliente
@@ -576,7 +700,9 @@ db.get(`
 
 ### 9.1 Gestión de Productos
 - ✅ Crear, editar, eliminar productos
-- ✅ Categorización
+- ✅ Sistema de categorías con tabla dedicada y combo selector
+- ✅ Subida de imágenes locales (guardadas en `backend/uploads/products/`)
+- ✅ Visualización ampliada de imágenes con modal al mantener presionado el botón "ojito"
 - ✅ Soft delete (productos no se eliminan permanentemente)
 - ✅ Actualización en tiempo real en todas las pantallas
 
@@ -584,7 +710,10 @@ db.get(`
 - ✅ Crear pedidos con múltiples productos
 - ✅ Cálculo automático de totales
 - ✅ Código de seguimiento único por pedido
-- ✅ Actualización de estados
+- ✅ Actualización de estados con sincronización en tiempo real en todas las vistas
+- ✅ Ordenamiento inteligente: primero por prioridad de estado (Pendiente, En preparación, etc.), luego por fecha (más nuevos primero)
+- ✅ Indicadores visuales: estados "Pendiente" y "En preparación" con animación de parpadeo
+- ✅ Visualización de fecha y hora en cada tarjeta de pedido
 - ✅ Eliminación de pedidos
 
 ### 9.3 Seguimiento de Pedidos
@@ -610,6 +739,20 @@ db.get(`
 - ✅ Detección automática de pedidos activos recientes del mismo cliente
 - ✅ Agregado de productos a pedidos existentes
 - ✅ Actualización automática de totales
+
+### 9.7 Menú Público
+- ✅ Vista de menú tipo carta de restaurante organizado por categorías
+- ✅ Diseño visual elegante con banner temático "El Barril & Brasa Bar"
+- ✅ Filtrado por categoría y búsqueda de productos
+- ✅ Visualización completa de productos: nombre, precio, categoría, descripción e imagen
+- ✅ Vista responsive optimizada para móviles, tablets y escritorio
+- ✅ Botón de refrescar para actualizar el menú manualmente
+
+### 9.8 Gestión de Categorías
+- ✅ Tabla dedicada de categorías en la base de datos
+- ✅ Creación de categorías desde el formulario de productos
+- ✅ Combo selector de categorías en lugar de campo de texto libre
+- ✅ API REST completa para gestión de categorías
 
 ---
 
@@ -710,6 +853,10 @@ La aplicación se abre en: `http://localhost:4200`
 **server.js**
 ```javascript
 const PORT = process.env.PORT || 3000;
+
+// Servir archivos estáticos de imágenes subidas
+const uploadsPath = path.join(__dirname, 'uploads');
+app.use('/uploads', express.static(uploadsPath));
 ```
 
 **CORS Configuration:**
@@ -1043,7 +1190,7 @@ Actualizar `environment.ts` con la URL del tunnel.
 - ⚠️ **Documentación API** (Swagger/OpenAPI)
 - ⚠️ **CI/CD Pipeline**
 - ⚠️ **Docker Containerization**
-- ⚠️ **Manejo de archivos** para imágenes de productos
+- ✅ **Manejo de archivos** para imágenes de productos (implementado con Multer)
 - ⚠️ **Internacionalización (i18n)**
 
 ### 17.3 Optimizaciones
@@ -1068,13 +1215,28 @@ MIT License - Ver archivo LICENSE para más detalles.
 
 ---
 
-**Versión de la Documentación:** 2.0  
-**Última actualización:** Diciembre 2024  
+**Versión de la Documentación:** 3.0  
+**Última actualización:** Enero 2025  
 **Autor:** Equipo de Desarrollo PedidosLocal
 
 ---
 
 ## 📝 Notas de Versión
+
+### Versión 3.0 (Enero 2025)
+- ✅ Sistema de categorías: tabla dedicada y API REST completa
+- ✅ Subida de imágenes locales con Multer (guardadas en `backend/uploads/products/`)
+- ✅ Nuevo módulo de Menú público (`/menu`) organizado por categorías
+- ✅ Vista ampliada de imágenes con modal interactivo (botón "ojito")
+- ✅ Mejoras en módulo de pedidos:
+  - Ordenamiento inteligente por prioridad de estado y fecha
+  - Indicadores visuales con animación de parpadeo para estados prioritarios
+  - Visualización de fecha y hora en tarjetas de pedidos
+- ✅ Sincronización mejorada: evento `pedidoActualizado` global para todas las vistas
+- ✅ Botones de refrescar en módulos de productos y menú
+- ✅ Diseño responsive mejorado para móviles
+- ✅ Actualizada documentación de endpoints con soporte multipart/form-data
+- ✅ Agregado Multer al stack tecnológico
 
 ### Versión 2.0 (Diciembre 2024)
 - ✅ Agregada sección completa de Dashboard y Analytics
