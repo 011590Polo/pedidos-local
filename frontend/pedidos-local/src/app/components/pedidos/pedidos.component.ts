@@ -32,7 +32,6 @@ export class PedidosComponent implements OnInit, OnDestroy {
   grupoActual: PedidoAgrupado | null = null;
   cargandoGrupo: boolean = false;
   mostrarCarritoMovil: boolean = false;
-  private endPressHandler = () => this.onPressEnd();
 
   // Formulario de pedido
   nuevoPedido: PedidoRequest = {
@@ -256,18 +255,6 @@ export class PedidosComponent implements OnInit, OnDestroy {
   ocultarImagen(): void {
     this.mostrarImagenModal = false;
     this.imagenSeleccionadaUrl = '';
-  }
-
-  onPressStart(imagen?: string): void {
-    this.verImagen(imagen);
-    window.addEventListener('mouseup', this.endPressHandler, { once: true } as any);
-    window.addEventListener('blur', this.endPressHandler, { once: true } as any);
-  }
-
-  onPressEnd(): void {
-    this.ocultarImagen();
-    window.removeEventListener('mouseup', this.endPressHandler);
-    window.removeEventListener('blur', this.endPressHandler);
   }
 
   cargarPedidos(): void {

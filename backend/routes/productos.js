@@ -7,6 +7,7 @@ const {
   updateProducto,
   deleteProducto
 } = require('../database');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 // Soporte de subida de archivos (imágenes)
 const multer = require('multer');
@@ -93,8 +94,8 @@ router.get('/:id', (req, res) => {
   });
 });
 
-// POST /productos - Crear un nuevo producto
-router.post('/', upload.single('imagen'), (req, res) => {
+// POST /productos - Crear un nuevo producto (solo admin)
+router.post('/', requireAuth, requireAdmin, upload.single('imagen'), (req, res) => {
   const { nombre, precio, categoria, descripcion } = req.body;
   const imagenPath = req.file ? `/uploads/products/${req.file.filename}` : (req.body.imagen || null);
   
@@ -152,8 +153,8 @@ router.post('/', upload.single('imagen'), (req, res) => {
   });
 });
 
-// PUT /productos/:id - Actualizar un producto
-router.put('/:id', upload.single('imagen'), (req, res) => {
+// PUT /productos/:id - Actualizar un producto (solo admin)
+router.put('/:id', requireAuth, requireAdmin, upload.single('imagen'), (req, res) => {
   const { id } = req.params;
   const { nombre, precio, categoria, descripcion } = req.body;
   const imagenPath = req.file ? `/uploads/products/${req.file.filename}` : (req.body.imagen || undefined);
@@ -217,8 +218,8 @@ router.put('/:id', upload.single('imagen'), (req, res) => {
   });
 });
 
-// DELETE /productos/:id - Eliminar un producto
-router.delete('/:id', (req, res) => {
+// DELETE /productos/:id - Eliminar un producto (solo admin)
+router.delete('/:id', requireAuth, requireAdmin, (req, res) => {
   const { id } = req.params;
   
   if (!id || isNaN(id)) {

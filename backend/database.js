@@ -19,6 +19,17 @@ function initializeDatabase() {
     createTables()
       .then(() => migrateDatabase())
       .then(() => {
+        // Crear usuarios por defecto
+        return new Promise((resolveUsers) => {
+          createDefaultUsers((err) => {
+            if (err) {
+              console.warn('⚠️ Error al crear usuarios por defecto:', err);
+            }
+            resolveUsers();
+          });
+        });
+      })
+      .then(() => {
         console.log('✅ Base de datos inicializada correctamente');
         resolve();
       })
@@ -102,6 +113,16 @@ function createTables() {
         estado TEXT DEFAULT 'Pendiente',
         FOREIGN KEY (id_pedido) REFERENCES pedidos(id) ON DELETE CASCADE,
         FOREIGN KEY (id_producto) REFERENCES productos(id)
+      )`,
+      
+      // Tabla usuarios
+      `CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        rol TEXT NOT NULL DEFAULT 'cliente',
+        activo INTEGER DEFAULT 1,
+        fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP
       )`
     ];
 
@@ -913,6 +934,80 @@ function getClientesUnicos(callback) {
   `, callback);
 }
 
+// ==========================================
+// FUNCIONES DE AUTENTICACIÓN Y USUARIOS
+// ==========================================
+
+// Función para obtener usuario por nombre de usuario
+function getUsuarioByUsername(usuario, callback) {
+  db.get(
+    'SELECT id, usuario, password, rol, activo FROM usuarios WHERE usuario = ? AND activo = 1',
+    [usuario],
+    callback
+  );
+}
+
+// Función para crear usuarios iniciales (admin y cliente)
+function createDefaultUsers(callback) {
+  const usuarios = [
+    { usuario: 'admin', password: 'admin123', rol: 'admin' },
+    { usuario: 'cliente', password: 'cliente123', rol: 'cliente' }
+  ];
+
+  let completed = 0;
+  const total = usuarios.length;
+  
+  if (total === 0) {
+    callback(null);
+    return;
+  }
+
+  console.log('👥 Iniciando creación de usuarios por defecto...');
+
+  usuarios.forEach((user) => {
+    db.get('SELECT id FROM usuarios WHERE usuario = ?', [user.usuario], (err, row) => {
+      if (err) {
+        console.error(`❌ Error al verificar usuario ${user.usuario}:`, err);
+        completed++;
+        if (completed === total) {
+          console.log('✅ Proceso de creación de usuarios completado');
+          callback(null);
+        }
+        return;
+      }
+
+      if (!row) {
+        // Usuario no existe, crearlo
+        console.log(`📝 Creando usuario ${user.usuario} con rol ${user.rol}...`);
+        db.run(
+          'INSERT INTO usuarios (usuario, password, rol, activo) VALUES (?, ?, ?, 1)',
+          [user.usuario, user.password, user.rol],
+          function(err) {
+            if (err) {
+              console.error(`❌ Error al crear usuario ${user.usuario}:`, err);
+            } else {
+              console.log(`✅ Usuario ${user.usuario} creado con rol ${user.rol} (ID: ${this.lastID})`);
+            }
+            completed++;
+            if (completed === total) {
+              console.log('✅ Proceso de creación de usuarios completado');
+              callback(null);
+            }
+          }
+        );
+      } else {
+        // Usuario ya existe
+        console.log(`ℹ️ Usuario ${user.usuario} ya existe (ID: ${row.id})`);
+        completed++;
+        if (completed === total) {
+          console.log('✅ Proceso de creación de usuarios completado');
+          callback(null);
+        }
+      }
+    });
+  });
+}
+
 // Exportar funciones y la instancia de la base de datos
 module.exports = {
   db,
@@ -952,5 +1047,8 @@ module.exports = {
   getClientesUnicos,
   // Categorías
   getCategorias,
-  createCategoria
+  createCategoria,
+  // Autenticación
+  getUsuarioByUsername,
+  createDefaultUsers
 };

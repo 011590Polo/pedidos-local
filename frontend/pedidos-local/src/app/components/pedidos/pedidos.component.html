@@ -19,10 +19,7 @@
                   <div class="relative mr-2" *ngIf="producto.imagen">
                     <img [src]="getImagenUrl(producto.imagen)" alt="{{ producto.nombre }}" class="w-8 h-8 object-cover rounded border border-gray-200" />
                     <button type="button"
-                            (mousedown)="onPressStart(producto.imagen)"
-                            (touchstart)="onPressStart(producto.imagen)"
-                            (touchend)="onPressEnd()"
-                            (touchcancel)="onPressEnd()"
+                            (click)="verImagen(producto.imagen)"
                             class="absolute -top-2 -right-2 bg-white/90 hover:bg-white text-gray-700 hover:text-gray-900 border border-gray-200 rounded-full p-1 shadow"
                             title="Ver imagen">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

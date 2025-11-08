@@ -12,9 +12,10 @@ const {
   getPedidosAgrupados,
   getPedidosPorGrupo
 } = require('../database');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
-// GET /pedidos - Listar todos los pedidos
-router.get('/', (req, res) => {
+// GET /pedidos - Listar todos los pedidos (solo admin)
+router.get('/', requireAuth, requireAdmin, (req, res) => {
   const includeDetalles = req.query.include === 'detalles';
   
   getPedidos((err, pedidos) => {
@@ -62,8 +63,8 @@ router.get('/', (req, res) => {
 });
 
 // IMPORTANTE: Las rutas específicas deben ir ANTES de las rutas con parámetros genéricos
-// GET /pedidos/agrupados - Obtener pedidos agrupados por código público
-router.get('/agrupados', (req, res) => {
+// GET /pedidos/agrupados - Obtener pedidos agrupados por código público (solo admin)
+router.get('/agrupados', requireAuth, requireAdmin, (req, res) => {
   getPedidosAgrupados((err, grupos) => {
     if (err) {
       console.error('Error al obtener pedidos agrupados:', err);
@@ -81,8 +82,8 @@ router.get('/agrupados', (req, res) => {
   });
 });
 
-// GET /pedidos/grupo/:codigo - Obtener todos los pedidos de un grupo por código público
-router.get('/grupo/:codigo', (req, res) => {
+// GET /pedidos/grupo/:codigo - Obtener todos los pedidos de un grupo por código público (solo admin)
+router.get('/grupo/:codigo', requireAuth, requireAdmin, (req, res) => {
   const { codigo } = req.params;
   
   if (!codigo || codigo.trim().length === 0) {
@@ -156,8 +157,8 @@ router.get('/seguimiento/:codigo', (req, res) => {
   });
 });
 
-// GET /pedidos/:id/detalles - Obtener detalles de un pedido con estados
-router.get('/:id/detalles', (req, res) => {
+// GET /pedidos/:id/detalles - Obtener detalles de un pedido con estados (solo admin)
+router.get('/:id/detalles', requireAuth, requireAdmin, (req, res) => {
   const { id } = req.params;
   
   if (!id || isNaN(id)) {
@@ -184,8 +185,8 @@ router.get('/:id/detalles', (req, res) => {
   });
 });
 
-// GET /pedidos/:id - Obtener un pedido específico (DEBE IR AL FINAL)
-router.get('/:id', (req, res) => {
+// GET /pedidos/:id - Obtener un pedido específico (DEBE IR AL FINAL) (solo admin)
+router.get('/:id', requireAuth, requireAdmin, (req, res) => {
   const { id } = req.params;
   
   if (!id || isNaN(id)) {
@@ -218,8 +219,8 @@ router.get('/:id', (req, res) => {
   });
 });
 
-// PUT /pedidos/:id/detalle/:detalleId - Actualizar estado de un detalle específico
-router.put('/:id/detalle/:detalleId', (req, res) => {
+// PUT /pedidos/:id/detalle/:detalleId - Actualizar estado de un detalle específico (solo admin)
+router.put('/:id/detalle/:detalleId', requireAuth, requireAdmin, (req, res) => {
   const { id, detalleId } = req.params;
   const { estado } = req.body;
   
@@ -299,7 +300,7 @@ router.put('/:id/detalle/:detalleId', (req, res) => {
   });
 });
 
-// POST /pedidos - Crear un nuevo pedido
+// POST /pedidos - Crear un nuevo pedido (público - cualquier cliente puede crear pedidos)
 router.post('/', (req, res) => {
   const { cliente, mesa, productos } = req.body;
   
@@ -409,8 +410,8 @@ router.post('/', (req, res) => {
   });
 });
 
-// PUT /pedidos/:id - Actualizar un pedido
-router.put('/:id', (req, res) => {
+// PUT /pedidos/:id - Actualizar un pedido (solo admin)
+router.put('/:id', requireAuth, requireAdmin, (req, res) => {
   const { id } = req.params;
   const { cliente, mesa, estado, total } = req.body;
   
@@ -507,8 +508,8 @@ router.put('/:id', (req, res) => {
   });
 });
 
-// DELETE /pedidos/:id - Eliminar un pedido
-router.delete('/:id', (req, res) => {
+// DELETE /pedidos/:id - Eliminar un pedido (solo admin)
+router.delete('/:id', requireAuth, requireAdmin, (req, res) => {
   const { id } = req.params;
   
   if (!id || isNaN(id)) {

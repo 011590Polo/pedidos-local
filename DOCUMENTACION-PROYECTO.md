@@ -36,6 +36,7 @@
 - ✅ Base de datos local con SQLite
 - ✅ Interfaz moderna y responsive con Angular
 - ✅ Reutilización automática de códigos de pedidos para el mismo cliente
+- ✅ Autenticación con roles (admin y cliente) y auto login para clientes
 
 ---
 
@@ -71,6 +72,7 @@
 - **SQLite3** (v5.1+): Base de datos relacional embebida
 - **Socket.IO** (v4.8+): Biblioteca para comunicación en tiempo real
 - **Multer** (v1.4+): Middleware para manejo de archivos multipart/form-data (subida de imágenes)
+- **express-session** (v1.18+): Manejo de sesiones y autenticación basada en cookies
 - **CORS**: Middleware para manejo de políticas de origen cruzado
 
 ### 3.2 Frontend
@@ -464,13 +466,37 @@ Obtiene lista de todos los clientes únicos.
 
 ### 7.1 Componentes Principales
 
+#### LoginComponent (`components/login/`)
+**Responsabilidades:**
+- Autenticación de usuarios administradores
+- Validación de credenciales y manejo de mensajes de error
+- Presentación de credenciales prellenadas para el rol admin
+
+**Características:**
+- Formularios reactivos con validación inmediata
+- Llamadas al backend para iniciar/cerrar sesión utilizando cookies de sesión
+- Manejo de estados de carga y errores HTTP
+- Redirección automática según el rol después de iniciar sesión (admin → dashboard)
+
+#### AppComponent (`app.component`)
+**Responsabilidades:**
+- Contenedor principal de la aplicación y navegación
+- Gestión de estado de autenticación global
+- Auto login transparente para clientes cuando no existe sesión activa
+
+**Características:**
+- Barra de navegación que muestra opciones según el rol autenticado
+- Auto login del cliente (`cliente/cliente123`) al ingresar a módulos públicos (menú/seguimiento)
+- Logout desactiva temporalmente el auto login para permitir que el administrador ingrese
+- Integración con `AuthService` para escuchar cambios de sesión en tiempo real
+
 #### PedidosComponent (`components/pedidos/`)
 **Responsabilidades:**
 - Mostrar lista de productos disponibles
 - Gestionar carrito de compras con interfaz responsive
 - Crear nuevos pedidos
 - Generar código QR para seguimiento de pedidos
-- Mostrar lista de pedidos recientes
+- Mostrar lista de pedidos recientes optimizada para móviles
 - Actualizar estados de pedidos
 
 **Características:**
@@ -480,23 +506,41 @@ Obtiene lista de todos los clientes únicos.
 - Generación automática de código QR al crear pedido
 - Modal de confirmación con código QR visible e imprimible
 - URL de seguimiento generada automáticamente: `${window.location.origin}/seguimiento?codigo=${codigo}`
+- Vista previa de imágenes de productos mediante modal (apertura con clic)
 - **Carrito flotante para móviles:**
   - Componente fijo en la parte inferior (`fixed bottom-0`) visible solo en pantallas pequeñas
+  - Altura máxima limitada: 50vh en móviles, 55vh en tablets
   - Header colapsable con información resumida (cantidad de items, total)
   - Expansión automática cuando se agrega un producto (`mostrarCarritoMovil` se activa automáticamente)
-  - Panel expandible con scroll personalizado (máximo 60vh)
+  - Panel expandible con scroll interno optimizado (estructura flexbox)
   - Gestión completa de productos: agregar, modificar cantidad, eliminar
   - Cierre automático cuando el carrito queda vacío o se crea un pedido
   - Animaciones CSS (`slideUp`, `fadeInDown`) para transiciones suaves
+  - Prevención de crecimiento excesivo: no oculta el contenido detrás del carrito
 - **Carrito sticky para desktop:**
   - Panel lateral sticky en el sidebar (`sticky top-6`)
   - Mantiene funcionalidad original del carrito
   - Visible solo en pantallas grandes (`lg:block`)
+- **Tarjetas de pedidos recientes optimizadas:**
+  - Tamaños de texto reducidos para móviles (text-xs, text-sm)
+  - Padding compacto: `p-2.5 sm:p-3 lg:p-4`
+  - Nombres de clientes con truncate para evitar desbordes
+  - Badges de estado con tamaños ajustados
+  - Botones con tamaños responsive
 
 #### ProductosComponent (`components/productos/`)
 **Responsabilidades:**
 - CRUD completo de productos
 - Gestión de categorías
+- Diseño responsive optimizado para móviles y tablets
+
+**Características:**
+- Tarjetas de productos compactas con tamaños adaptativos
+- Formularios con inputs y botones optimizados para móviles
+- Modales con tamaños de texto escalables
+- Imágenes de productos con tamaños reducidos en móviles
+- Modal de imagen ampliada accesible con un solo clic en el botón "ojito"
+- Layout flexible que se adapta a diferentes tamaños de pantalla
 
 #### SeguimientoComponent (`components/seguimiento/`)
 **Responsabilidades:**
@@ -508,7 +552,10 @@ Obtiene lista de todos los clientes únicos.
 **Características:**
 - Lectura automática de código desde URL (`/seguimiento?codigo=ABC12`)
 - Búsqueda automática al detectar código en query params
-- Interfaz limpia y responsive para seguimiento de pedidos
+- Interfaz limpia y responsive optimizada para móviles
+- Tamaños de texto escalables: `text-xs sm:text-sm`, `text-sm sm:text-base`
+- Layout flexible con elementos que se adaptan al tamaño de pantalla
+- Tarjetas de información compactas con padding responsive
 
 #### DashboardComponent (`components/dashboard/`)
 **Responsabilidades:**
@@ -518,6 +565,15 @@ Obtiene lista de todos los clientes únicos.
 - Gráficos de ventas por período
 - Filtrar pedidos por múltiples criterios
 
+**Características:**
+- Diseño completamente responsive optimizado para móviles y tablets
+- Métricas principales con tamaños de texto escalables: `text-lg sm:text-xl lg:text-2xl`
+- Tablas responsive con columnas ocultas en móviles (`hidden sm:table-cell`)
+- Tarjetas de estado con padding y fuentes adaptativas
+- Gráficos de ventas semanales con grid responsive: `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7`
+- Filtros de pedidos con layout flexible que se apila en móviles
+- Botones y inputs con tamaños ajustados para mejor usabilidad en pantallas pequeñas
+
 #### MenuComponent (`components/menu/`)
 **Responsabilidades:**
 - Mostrar menú público de productos organizado por categorías
@@ -525,6 +581,13 @@ Obtiene lista de todos los clientes únicos.
 - Filtrado por categoría y búsqueda de productos
 - Vista responsive optimizada para móviles y tablets
 - Banner temático con estilo "El Barril & Brasa Bar"
+
+**Características:**
+- Diseño inspirado en carta física con tonos madera, dorado y negro
+- Secciones agrupadas por categoría con scroll vertical
+- Imágenes optimizadas para móvil con modal ampliado al hacer clic
+- Búsqueda y filtros responsivos con botones estilizados
+- Compatibilidad con auto login de clientes para acceso inmediato
 
 ### 7.2 Servicios
 
@@ -585,6 +648,22 @@ export class AnalyticsService {
 }
 ```
 
+#### AuthService (`services/auth.service.ts`)
+```typescript
+export class AuthService {
+  login(usuario: string, password: string): Observable<LoginResponse>
+  logout(): Observable<void>
+  checkSession(): void
+  getCurrentUser(): Usuario | null
+  isAuthenticated(): boolean
+  isAdmin(): boolean
+  isCliente(): boolean
+}
+```
+- Manejo centralizado de la sesión del usuario
+- Lógica de auto login para clientes en módulos públicos
+- Persistencia del usuario actual en `localStorage` y sincronización con cookies de sesión
+
 ### 7.3 Estilos CSS y Animaciones
 
 #### PedidosComponent (`components/pedidos/pedidos.component.css`)
@@ -597,13 +676,19 @@ export class AnalyticsService {
 
 **Clases CSS personalizadas:**
 - `.cart-mobile-container`: Contenedor fijo del carrito móvil
-- `.cart-mobile-content`: Contenido expandible del carrito con scroll
+- `.cart-mobile-wrapper`: Contenedor principal con altura máxima limitada (50vh móviles, 55vh tablets)
+- `.cart-mobile-header`: Header fijo del carrito (flex-shrink: 0)
+- `.cart-mobile-content`: Contenido expandible con estructura flexbox
+- `.cart-mobile-products`: Área scrollable de productos (flex: 1)
+- `.cart-mobile-footer`: Footer fijo del carrito (flex-shrink: 0)
 - `.mb-24`: Margen inferior aplicado al panel de productos en móviles para evitar solapamiento
 
 **Responsive Design:**
 - Carrito móvil visible solo en pantallas < 1024px
 - Carrito sticky en sidebar para pantallas >= 1024px
 - Z-index configurado (z-40) para asegurar visibilidad sobre otros elementos
+- Altura máxima limitada para evitar que el carrito oculte contenido importante
+- Media queries para diferentes tamaños de pantalla (móviles vs tablets)
 
 ### 7.4 Modelos TypeScript
 
@@ -754,9 +839,14 @@ db.get(`
 - ✅ Crear, editar, eliminar productos
 - ✅ Sistema de categorías con tabla dedicada y combo selector
 - ✅ Subida de imágenes locales (guardadas en `backend/uploads/products/`)
-- ✅ Visualización ampliada de imágenes con modal al mantener presionado el botón "ojito"
+- ✅ Visualización ampliada de imágenes con modal al hacer clic en el botón "ojito"
 - ✅ Soft delete (productos no se eliminan permanentemente)
 - ✅ Actualización en tiempo real en todas las pantallas
+- ✅ **Diseño responsive optimizado:**
+  - Tarjetas de productos compactas en móviles
+  - Formularios con inputs y botones de tamaños adaptativos
+  - Modales con padding y fuentes escalables
+  - Imágenes con tamaños reducidos en pantallas pequeñas
 
 ### 9.2 Gestión de Pedidos
 - ✅ Crear pedidos con múltiples productos
@@ -764,16 +854,23 @@ db.get(`
 - ✅ Código de seguimiento único por pedido
 - ✅ Generación automática de código QR con URL de seguimiento
 - ✅ Modal de confirmación con código QR visible e imprimible
-- ✅ **Carrito de compras flotante para móviles:**
+- ✅ **Carrito de compras flotante para móviles optimizado:**
   - Carrito fijo en la parte inferior cuando hay productos (solo en pantallas pequeñas)
+  - Altura máxima limitada: 50vh en móviles, 55vh en tablets
   - Header colapsable con resumen (cantidad de items y total)
   - Expansión automática al agregar productos
-  - Panel expandible con scroll para listar productos
+  - Panel expandible con scroll interno optimizado (estructura flexbox)
+  - Prevención de crecimiento excesivo: no oculta el contenido detrás
   - Controles de cantidad y eliminación de productos
   - Footer fijo con total y botón "Crear Pedido"
   - Cierre automático cuando el carrito queda vacío o se crea un pedido
   - Animaciones suaves para mejor experiencia de usuario
   - Carrito sticky en sidebar para desktop (mantiene funcionalidad original)
+- ✅ **Tarjetas de pedidos recientes optimizadas:**
+  - Diseño compacto con tamaños de texto reducidos en móviles
+  - Padding adaptativo según tamaño de pantalla
+  - Nombres de clientes con truncate para evitar desbordes
+  - Badges de estado con tamaños escalables
 - ✅ Actualización de estados con sincronización en tiempo real en todas las vistas
 - ✅ Ordenamiento inteligente: primero por prioridad de estado (Pendiente, En preparación, etc.), luego por fecha (más nuevos primero)
 - ✅ Indicadores visuales: estados "Pendiente" y "En preparación" con animación de parpadeo
@@ -821,6 +918,14 @@ db.get(`
 - ✅ Creación de categorías desde el formulario de productos
 - ✅ Combo selector de categorías en lugar de campo de texto libre
 - ✅ API REST completa para gestión de categorías
+
+### 9.9 Autenticación y Roles
+- ✅ Acceso separado para administradores y clientes
+- ✅ Sesiones HTTP configuradas con `express-session`
+- ✅ Login de administrador mediante formulario dedicado
+- ✅ Auto login transparente para clientes al ingresar al menú o seguimiento
+- ✅ Navegación dinámica: se muestran opciones según el rol activo
+- ✅ Logout disponible para administradores (desactiva auto login hasta nuevo acceso público)
 
 ---
 
@@ -1291,7 +1396,7 @@ MIT License - Ver archivo LICENSE para más detalles.
 
 ---
 
-**Versión de la Documentación:** 3.3  
+**Versión de la Documentación:** 3.5  
 **Última actualización:** Enero 2025  
 **Autor:** Equipo de Desarrollo PedidosLocal
 
@@ -1299,12 +1404,49 @@ MIT License - Ver archivo LICENSE para más detalles.
 
 ## 📝 Notas de Versión
 
+### Versión 3.5 (Enero 2025)
+- ✅ **Autenticación basada en roles con sesiones**:
+  - Implementación de `express-session` en el backend
+  - Rutas protegidas para administradores: pedidos, productos y dashboard
+  - Login dedicado únicamente para administradores con credenciales prellenadas
+  - Auto login transparente del cliente (`cliente/cliente123`) al acceder a módulos públicos (menú / seguimiento)
+  - Navegación dinámica: la barra superior muestra opciones según el rol activo
+  - Logout desactiva temporalmente el auto login para permitir ingreso administrativo
+- ✅ **Mejora en la visualización de imágenes**:
+  - Modal de imágenes ahora se abre con un clic (ya no requiere mantener presionado)
+  - Comportamiento unificado en módulos de Productos, Menú y Pedidos
+  - Cierre de modales mediante botón dedicado para mayor control en móviles
+
+### Versión 3.4 (Enero 2025)
+- ✅ **Optimización completa de experiencia móvil y tablet** (mejora de UX):
+  - Rediseño responsive de todos los componentes para dispositivos móviles y tablets
+  - Navegación principal optimizada: tamaños de texto y elementos reducidos en móviles
+  - Dashboard con elementos compactos: padding, fuentes y botones ajustados para pantallas pequeñas
+  - Tablas responsive con columnas ocultas en móviles para mejor legibilidad
+  - Tarjetas de pedidos recientes más compactas con tamaños de texto reducidos
+  - Componente de productos optimizado: tarjetas, formularios y modales ajustados para móviles
+  - Componente de seguimiento con diseño más compacto y textos escalables
+  - Aplicación de clases Tailwind responsivas (`sm:`, `lg:`, `xl:`) en toda la aplicación
+  - Espaciado adaptativo: padding, margin y gaps más pequeños en pantallas móviles
+  - Tipografía escalable: tamaños de fuente progresivos según breakpoints
+  - Layout flexible: elementos que se apilan verticalmente en móviles y horizontalmente en desktop
+  - Mejora significativa en usabilidad y legibilidad en dispositivos móviles y tablets
+
+- ✅ **Mejoras al carrito móvil flotante**:
+  - Altura máxima limitada: 50vh en móviles, 55vh en tablets (antes 75vh)
+  - Estructura flexbox mejorada para control preciso de altura
+  - Header y footer fijos con `flex-shrink: 0`
+  - Scroll interno optimizado en área de productos
+  - Prevención de crecimiento excesivo hacia arriba
+  - Mejor visibilidad del contenido detrás del carrito
+  - Experiencia de usuario mejorada al agregar muchos productos
+
 ### Versión 3.3 (Enero 2025)
 - ✅ **Carrito de compras flotante para móviles** (mejora de UX):
   - Carrito fijo en la parte inferior de la pantalla cuando hay productos (solo en móviles/tablets)
   - Header colapsable con información resumida: cantidad de items y total
   - Expansión automática al agregar productos al carrito
-  - Panel expandible con scroll personalizado (máximo 60vh)
+  - Panel expandible con scroll personalizado
   - Controles completos: modificar cantidades, eliminar productos, limpiar carrito
   - Footer fijo con total destacado y botón prominente "Crear Pedido"
   - Cierre automático cuando el carrito queda vacío o se crea un pedido exitosamente

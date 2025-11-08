@@ -25,7 +25,6 @@ export class ProductosComponent implements OnInit {
   imagenFile: File | null = null;
   mostrarImagenModal: boolean = false;
   imagenSeleccionadaUrl: string = '';
-  private endPressHandler = () => this.onPressEnd();
 
   // Formulario
   nuevoProducto: Producto = {
@@ -213,19 +212,6 @@ export class ProductosComponent implements OnInit {
   ocultarImagen(): void {
     this.mostrarImagenModal = false;
     this.imagenSeleccionadaUrl = '';
-  }
-
-  onPressStart(imagen?: string): void {
-    this.verImagen(imagen);
-    // Cerrar cuando se suelte el mouse en cualquier parte o la ventana pierda foco
-    window.addEventListener('mouseup', this.endPressHandler, { once: true } as any);
-    window.addEventListener('blur', this.endPressHandler, { once: true } as any);
-  }
-
-  onPressEnd(): void {
-    this.ocultarImagen();
-    window.removeEventListener('mouseup', this.endPressHandler);
-    window.removeEventListener('blur', this.endPressHandler);
   }
 
   eliminarProducto(id: number): void {

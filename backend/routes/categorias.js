@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getCategorias, createCategoria } = require('../database');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 // GET /categorias - Listar categorías activas
 router.get('/', (req, res) => {
@@ -17,8 +18,8 @@ router.get('/', (req, res) => {
   });
 });
 
-// POST /categorias - Crear nueva categoría (si no existe)
-router.post('/', (req, res) => {
+// POST /categorias - Crear nueva categoría (solo admin)
+router.post('/', requireAuth, requireAdmin, (req, res) => {
   const { nombre } = req.body || {};
   if (!nombre || !String(nombre).trim()) {
     return res.status(400).json({

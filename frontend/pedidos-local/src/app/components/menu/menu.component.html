@@ -44,8 +44,7 @@
                 <div class="relative inline-block">
                   <img [src]="getImagenUrl(p.imagen)" alt="{{ p.nombre }}" class="menu-item-image" />
                   <button
-                    (mousedown)="onPressStart(p.imagen)"
-                    (touchstart)="onPressStart(p.imagen)"
+                    (click)="verImagen(p.imagen)"
                     class="menu-image-overlay"
                     type="button">
                     <div class="menu-eye-icon">

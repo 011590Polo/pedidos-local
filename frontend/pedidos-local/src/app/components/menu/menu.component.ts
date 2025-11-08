@@ -20,7 +20,6 @@ export class MenuComponent implements OnInit {
   categorias: string[] = [];
   mostrarImagenModal: boolean = false;
   imagenSeleccionadaUrl: string = '';
-  private endPressHandler = () => this.ocultarImagen();
 
   constructor(private productoService: ProductoService) {}
 
@@ -87,18 +86,6 @@ export class MenuComponent implements OnInit {
   ocultarImagen(): void {
     this.mostrarImagenModal = false;
     this.imagenSeleccionadaUrl = '';
-  }
-
-  onPressStart(imagen?: string): void {
-    this.verImagen(imagen);
-    window.addEventListener('mouseup', this.endPressHandler, { once: true } as any);
-    window.addEventListener('blur', this.endPressHandler, { once: true } as any);
-  }
-
-  onPressEnd(): void {
-    this.ocultarImagen();
-    window.removeEventListener('mouseup', this.endPressHandler);
-    window.removeEventListener('blur', this.endPressHandler);
   }
 }
 

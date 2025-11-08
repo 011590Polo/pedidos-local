@@ -2,12 +2,15 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
+const session = require('express-session');
 
 // Importar rutas
 const productosRoutes = require('./routes/productos');
 const pedidosRoutes = require('./routes/pedidos');
 const analyticsRoutes = require('./routes/analytics');
 const categoriasRoutes = require('./routes/categorias');
+const authRoutes = require('./routes/auth');
+const { requireAuth, requireAdmin } = require('./middleware/auth');
 
 // Importar configuración de base de datos
 const { initializeDatabase } = require('./database');
@@ -90,6 +93,20 @@ if (isDevelopment) {
   });
 }
 
+// Configurar sesiones ANTES de CORS y otras rutas
+app.use(session({
+  secret: 'pedidos-local-secret-key-2025', // En producción usar variable de entorno
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false, // En producción con HTTPS usar true
+    httpOnly: true,
+    sameSite: 'lax', // Permite cookies en desarrollo local
+    maxAge: 24 * 60 * 60 * 1000 // 24 horas
+  },
+  name: 'sessionId' // Nombre de la cookie
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -120,16 +137,23 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Set-Cookie']
 }));
 
 // ------------------------------------------------------
 
 // 🚀 RUTAS PRINCIPALES (con prefijo /api para evitar conflicto con rutas del frontend)
-app.use('/api/productos', productosRoutes);
-app.use('/api/pedidos', pedidosRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/categorias', categoriasRoutes);
+// Rutas de autenticación (públicas)
+app.use('/api/auth', authRoutes);
+
+// Rutas protegidas por rol
+// Admin: productos (CRUD), pedidos (gestión), analytics (dashboard), categorias (CRUD)
+// Cliente: puede ver productos (GET) para menú, crear pedidos (POST), ver seguimiento (GET por código)
+app.use('/api/productos', productosRoutes); // Los middleware se aplican dentro de las rutas
+app.use('/api/pedidos', pedidosRoutes); // Los middleware se aplican dentro de las rutas
+app.use('/api/analytics', requireAuth, requireAdmin, analyticsRoutes); // Solo admin
+app.use('/api/categorias', categoriasRoutes); // Los middleware se aplican dentro de las rutas
 
 // Ruta base de prueba
 app.get('/', (req, res) => {
